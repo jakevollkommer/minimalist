@@ -60,8 +60,10 @@ final class GuardiansOfTheRift
 		43675, // Pineapple
 		43676, // Head
 		43677, // Rock
+		43573, 43574, 43575, 43576,
 		43678, 43679, 43680, 43681, 43682, 43683, 43684, 43685, 43686, 43687, 43688,
 		43690, 43691, 43694,
+		43725, 43727, 43728,
 		43698, 43699, // Statue
 		43713, // Abyssal Rift
 		43823, 43826, 43828, 43829, 43830, 43831, 43832, 43833, 43834, 43835, 43836,
@@ -82,12 +84,19 @@ final class GuardiansOfTheRift
 	static final int ACTIVE_GUARDIAN_ANIMATION = 9363;
 
 	/**
+	 * The animation a guardian statue plays while INACTIVE. Unique to the statues, so
+	 * the draw listener can identify an inactive statue purely by this animation.
+	 */
+	static final int INACTIVE_GUARDIAN_ANIMATION = 9362;
+
+	/**
 	 * Small guardian parts and the depleted (mined-out) remains. The larger mineable
 	 * remains (43717-43721: Guardian remains, Large, Huge, Fallen guardian) are never
 	 * hidden so mining targets always stay visible.
 	 */
 	static final Set<Integer> GUARDIAN_REMAINS_OBJECTS = Set.of(
 		43715, 43716, // Guardian parts (small)
+		43717, 43718, // Guardian remains (small)
 		43796, 43797, 43798, 43799, 43800, 43801, 43804, 43805, // Guardian remains (depleted)
 		43803 // Rubble (depleted fallen guardian)
 	);
@@ -96,21 +105,12 @@ final class GuardiansOfTheRift
 	static final Set<Integer> ESSENCE_PILE_OBJECTS = Set.of(43722, 43723);
 
 	/**
-	 * Weak cells table and the four charged Barriers.
+	 * Weak cells table, the four charged Barriers, and the Elemental/Catalytic guides.
 	 */
 	static final Set<Integer> BARRIER_AND_CELL_OBJECTS = Set.of(
 		43733, // Weak cells
-		43744, 43747, 43748, 43750, 43751 // Barriers
-	);
-
-	/**
-	 * The Elemental/Catalytic guide markers. The game re-spawns these ground objects
-	 * every few seconds and clearing them from the tile does not un-draw them, so they
-	 * are hidden per-frame through the draw listener instead of scene removal.
-	 */
-	static final Set<Integer> GUIDE_OBJECTS = Set.of(
-		43752, // Elemental guide
-		43753  // Catalytic guide
+		43744, 43747, 43748, 43750, 43751, // Barriers
+		43752, 43753 // Elemental/Catalytic guide
 	);
 
 	/**
@@ -127,6 +127,52 @@ final class GuardiansOfTheRift
 
 	/** The rain effect objects inside the temple. */
 	static final Set<Integer> RAIN_OBJECTS = Set.of(43503, 43504);
+
+	/** The map region of the GOTR arena and temple. */
+	static final int ARENA_REGION = 14484;
+
+	/**
+	 * Generic decorative models placed in the arena that also exist elsewhere in the
+	 * game world — only hidden while inside {@link #ARENA_REGION}.
+	 */
+	static final Set<Integer> ARENA_GENERIC_SCENERY_OBJECTS = Set.of(85, 738, 2735, 2738, 7389);
+
+	/** The map regions of the twelve runecrafting altar rooms. */
+	static final Set<Integer> ALTAR_REGIONS = Set.of(
+		11339, // air
+		11083, // mind
+		10827, // water
+		10571, // earth
+		10315, // fire
+		10059, // body
+		8523,  // cosmic
+		9035,  // chaos
+		9547,  // nature
+		9803,  // law
+		8779,  // death
+		12875  // blood
+	);
+
+	/**
+	 * Decoration inside the altar rooms: pillars, rubble, columns, stalagmites, corpses,
+	 * bloodsplatters, bones, and unnamed models. These are generic world IDs, so they are
+	 * only hidden while inside {@link #ALTAR_REGIONS}. The Altar, Portal, and Mysterious
+	 * glow (exit marker) always stay visible.
+	 */
+	static final Set<Integer> ALTAR_SCENERY_OBJECTS = Set.of(
+		652, 653, 654, // Bloodsplatter
+		664, 665, 666, 667, // Corpse
+		701, // Curved bone
+		731, 732, // unnamed
+		736, // Animal skull
+		1448, 1449, 1450, 1451, 1502, 1503, // unnamed
+		1688, 1689, 1690, // unnamed wall decor
+		11941, 11942, // Column
+		11944, // Stalagmites
+		34780, 34781, 34782, // Pillar
+		34786, // unnamed
+		34803, 34804, 34805 // Rubble
+	);
 
 	/** Abyssal guardian, Abyssal walker, Abyssal leech — decorative creatures in the arena. */
 	static final Set<Integer> ABYSSAL_CREATURE_NPCS = Set.of(11405, 11406, 11407);

@@ -83,49 +83,55 @@ public interface MinimalistConfig extends Config
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrRain", name = "Hide rain", description = "The rain effect inside the temple", section = gotrSection, position = 7)
+	@ConfigItem(keyName = "gotrAltarScenery", name = "Hide altar scenery", description = "Pillars, rubble, corpses, and other decoration inside the runecrafting altars", section = gotrSection, position = 7)
+	default boolean gotrAltarScenery()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "gotrRain", name = "Hide rain", description = "The rain effect inside the temple", section = gotrSection, position = 8)
 	default boolean gotrRain()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrAbyssalCreatures", name = "Hide abyssal creatures", description = "Abyssal guardians, walkers, and leeches wandering the arena", section = gotrSection, position = 8)
+	@ConfigItem(keyName = "gotrAbyssalCreatures", name = "Hide abyssal creatures", description = "Abyssal guardians, walkers, and leeches wandering the arena", section = gotrSection, position = 9)
 	default boolean gotrAbyssalCreatures()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrSummonedGuardians", name = "Hide summoned guardians", description = "Catalytic and elemental guardians summoned by players", section = gotrSection, position = 9)
+	@ConfigItem(keyName = "gotrSummonedGuardians", name = "Hide summoned guardians", description = "Catalytic and elemental guardians summoned by players", section = gotrSection, position = 10)
 	default boolean gotrSummonedGuardians()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrApprentices", name = "Hide apprentices", description = "Apprentices Tamara, Cordelia, and Felix", section = gotrSection, position = 10)
+	@ConfigItem(keyName = "gotrApprentices", name = "Hide apprentices", description = "Apprentices Tamara, Cordelia, and Felix", section = gotrSection, position = 11)
 	default boolean gotrApprentices()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrRick", name = "Hide Rick", description = "Rick", section = gotrSection, position = 11)
+	@ConfigItem(keyName = "gotrRick", name = "Hide Rick", description = "Rick", section = gotrSection, position = 12)
 	default boolean gotrRick()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrHudPortalTimer", name = "Hide HUD portal timer", description = "The 'time since last portal' HUD text", section = gotrSection, position = 12)
+	@ConfigItem(keyName = "gotrHudPortalTimer", name = "Hide HUD portal timer", description = "The 'time since last portal' HUD text", section = gotrSection, position = 13)
 	default boolean gotrHudPortalTimer()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrHudGuardianCounter", name = "Hide HUD guardian counter", description = "The guardian count on the HUD", section = gotrSection, position = 13)
+	@ConfigItem(keyName = "gotrHudGuardianCounter", name = "Hide HUD guardian counter", description = "The guardian count on the HUD", section = gotrSection, position = 14)
 	default boolean gotrHudGuardianCounter()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrHudPortalLocation", name = "Hide HUD portal location", description = "The portal location text on the HUD", section = gotrSection, position = 14)
+	@ConfigItem(keyName = "gotrHudPortalLocation", name = "Hide HUD portal location", description = "The portal location text on the HUD", section = gotrSection, position = 15)
 	default boolean gotrHudPortalLocation()
 	{
 		return false;

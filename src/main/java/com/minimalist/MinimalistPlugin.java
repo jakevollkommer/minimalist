@@ -27,7 +27,6 @@ package com.minimalist;
 import com.google.inject.Provides;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -39,20 +38,18 @@ import net.runelite.api.Client;
 import net.runelite.api.DynamicObject;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
-import net.runelite.api.GroundObject;
 import net.runelite.api.NPC;
 import net.runelite.api.Renderable;
+import net.runelite.api.Scene;
+import net.runelite.api.SceneTileModel;
+import net.runelite.api.SceneTilePaint;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
 import net.runelite.api.WorldView;
-import net.runelite.api.events.BeforeRender;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.DecorativeObjectSpawned;
-import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.GroundObjectDespawned;
 import net.runelite.api.events.GroundObjectSpawned;
 import net.runelite.api.events.WallObjectSpawned;
 import net.runelite.api.widgets.Widget;
@@ -72,27 +69,14 @@ import net.runelite.client.plugins.PluginDescriptor;
 @lombok.extern.slf4j.Slf4j
 public class MinimalistPlugin extends Plugin
 {
-	// written on the client thread; volatile because the renderer thread reads
-	// hiddenNpcIds and hiddenStatueRenderables through the draw listener
+	// written on the client thread; volatile because the renderer thread reads them
+	// through the draw listener
 	private volatile Set<Integer> hiddenObjectIds = Set.of();
 	private volatile Set<Integer> hiddenNpcIds = Set.of();
 	private volatile Set<Integer> hiddenWidgetComponents = Set.of();
-	private volatile Set<Renderable> hiddenStatueRenderables = Set.of();
-	private boolean hideInactiveStatues;
-
-	/**
-	 * The guardian statues present in the scene. Statues stay for the whole game and
-	 * animate between active and inactive, so they are tracked and hidden per-frame
-	 * rather than removed.
-	 */
-	private final Set<GameObject> guardianStatues = new HashSet<>();
-	private final Map<GameObject, Integer> lastActiveTickByStatue = new HashMap<>();
-	private static final int ACTIVE_STATUE_GRACE_TICKS = 8;
-	/** Guide markers, hidden per-frame like statues; see {@link GuardiansOfTheRift#GUIDE_OBJECTS}. */
-	private final Set<GroundObject> guideMarkers = new HashSet<>();
-	private boolean hideGuideMarkers;
-	// TODO temporary diagnostics state; remove before hub submission
-	private int lastDiagnosticHiddenCount = -1;
+	private volatile boolean hideInactiveStatues;
+	private boolean hideAltarScenery;
+	private boolean hideArenaGenericScenery;
 
 	private final Hooks.RenderableDrawListener drawListener = this::shouldDraw;
 
@@ -118,8 +102,6 @@ public class MinimalistPlugin extends Plugin
 	protected void startUp()
 	{
 		hooks.registerRenderableDrawListener(drawListener);
-		// all set mutation happens on the client thread so spawn events, rescans,
-		// and the draw listener always agree on the current sets
 		clientThread.invokeLater(() ->
 		{
 			rebuildHiddenSets();
@@ -138,12 +120,7 @@ public class MinimalistPlugin extends Plugin
 			hiddenObjectIds = Set.of();
 			hiddenNpcIds = Set.of();
 			hiddenWidgetComponents = Set.of();
-			hiddenStatueRenderables = Set.of();
 			hideInactiveStatues = false;
-			hideGuideMarkers = false;
-			guardianStatues.clear();
-			guideMarkers.clear();
-			lastActiveTickByStatue.clear();
 
 			widgetsToRestore.forEach(component -> setWidgetHidden(component, false));
 			if (objectsWereHidden && client.getGameState() == GameState.LOGGED_IN)
@@ -168,6 +145,8 @@ public class MinimalistPlugin extends Plugin
 	{
 		Set<Integer> previousObjectIds = hiddenObjectIds;
 		Set<Integer> previousWidgets = hiddenWidgetComponents;
+		boolean previousAltarScenery = hideAltarScenery;
+		boolean previousArenaGenerics = hideArenaGenericScenery;
 		rebuildHiddenSets();
 
 		previousWidgets.stream()
@@ -179,33 +158,22 @@ public class MinimalistPlugin extends Plugin
 			return;
 		}
 
-		// Removed objects can only come back with a scene reload; newly added ones
-		// are handled by a rescan of the already-loaded scene.
-		boolean needsSceneReload = previousObjectIds.stream()
-			.anyMatch(objectId -> !hiddenObjectIds.contains(objectId));
-		if (needsSceneReload)
+		// object hiding only reliably takes effect during a scene load, so any change
+		// to the hidden object sets is applied through a reload
+		boolean objectSetChanged = !previousObjectIds.equals(hiddenObjectIds)
+			|| previousAltarScenery != hideAltarScenery
+			|| previousArenaGenerics != hideArenaGenericScenery;
+		if (objectSetChanged)
 		{
 			client.setGameState(GameState.LOADING);
-			return;
 		}
-
-		rescanSceneIfLoggedIn();
 	}
 
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
-		if (event.getGameState() == GameState.LOADING)
-		{
-			guardianStatues.clear();
-			lastActiveTickByStatue.clear();
-			guideMarkers.clear();
-			hiddenStatueRenderables = Set.of();
-			return;
-		}
-
-		// safety net: after every scene load (login, region change, or our own
-		// restore reload) sweep the fresh scene for anything spawn events missed
+		// safety net: after every scene load sweep the fresh scene for anything the
+		// spawn events missed
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
 			clientThread.invokeLater(this::rescanSceneIfLoggedIn);
@@ -215,102 +183,7 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onGameObjectSpawned(GameObjectSpawned event)
 	{
-		trackIfGuardianStatue(event.getGameObject());
 		hideIfCurated(event.getGameObject(), event.getTile());
-	}
-
-	@Subscribe
-	public void onGameObjectDespawned(GameObjectDespawned event)
-	{
-		guardianStatues.remove(event.getGameObject());
-	}
-
-	private void trackIfGuardianStatue(GameObject gameObject)
-	{
-		if (GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(gameObject.getId()))
-		{
-			guardianStatues.add(gameObject);
-		}
-	}
-
-	@Subscribe
-	public void onGameTick(GameTick event)
-	{
-		// TODO temporary diagnostics for statue behavior; remove before hub submission
-		int hiddenCount = hiddenStatueRenderables.size();
-		if (hiddenCount != lastDiagnosticHiddenCount)
-		{
-			lastDiagnosticHiddenCount = hiddenCount;
-			log.info("[minimalist-diag] inactive statues hidden: {} of {} tracked",
-				hiddenCount, guardianStatues.size());
-		}
-	}
-
-	@Subscribe
-	public void onBeforeRender(BeforeRender event)
-	{
-		// runs every frame: renderables get replaced by the client at will, so the
-		// hidden set must be rebuilt from fresh renderable identities each frame
-		// (bounded at 12 statues + 16 guide markers, so the per-frame cost is negligible)
-		hiddenStatueRenderables = Stream.concat(inactiveStatueRenderables(), guideMarkerRenderables())
-			.collect(Collectors.toUnmodifiableSet());
-	}
-
-	private Stream<Renderable> inactiveStatueRenderables()
-	{
-		if (!hideInactiveStatues || guardianStatues.isEmpty())
-		{
-			return Stream.empty();
-		}
-
-		guardianStatues.stream()
-			.filter(MinimalistPlugin::isPlayingActiveAnimation)
-			.forEach(statue -> lastActiveTickByStatue.put(statue, client.getTickCount()));
-
-		return guardianStatues.stream()
-			.filter(this::isOutsideActiveGraceWindow)
-			.map(GameObject::getRenderable)
-			.filter(Objects::nonNull);
-	}
-
-	private Stream<Renderable> guideMarkerRenderables()
-	{
-		if (!hideGuideMarkers || guideMarkers.isEmpty())
-		{
-			return Stream.empty();
-		}
-
-		return guideMarkers.stream()
-			.map(GroundObject::getRenderable)
-			.filter(Objects::nonNull);
-	}
-
-	private static boolean isPlayingActiveAnimation(GameObject statue)
-	{
-		Renderable renderable = statue.getRenderable();
-		if (!(renderable instanceof DynamicObject))
-		{
-			return false;
-		}
-
-		Animation animation = ((DynamicObject) renderable).getAnimation();
-		return animation != null && animation.getId() == GuardiansOfTheRift.ACTIVE_GUARDIAN_ANIMATION;
-	}
-
-	/**
-	 * Active statues cycle through non-active animation frames between loops, so a
-	 * statue only counts as inactive once it has not played the active animation for
-	 * a few ticks. This trades a few seconds of lag on deactivation for zero flicker.
-	 */
-	private boolean isOutsideActiveGraceWindow(GameObject statue)
-	{
-		Integer lastActiveTick = lastActiveTickByStatue.get(statue);
-		if (lastActiveTick == null)
-		{
-			return true;
-		}
-
-		return client.getTickCount() - lastActiveTick > ACTIVE_STATUE_GRACE_TICKS;
 	}
 
 	@Subscribe
@@ -328,22 +201,7 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onGroundObjectSpawned(GroundObjectSpawned event)
 	{
-		trackIfGuideMarker(event.getGroundObject());
 		hideIfCurated(event.getGroundObject(), event.getTile());
-	}
-
-	@Subscribe
-	public void onGroundObjectDespawned(GroundObjectDespawned event)
-	{
-		guideMarkers.remove(event.getGroundObject());
-	}
-
-	private void trackIfGuideMarker(GroundObject groundObject)
-	{
-		if (GuardiansOfTheRift.GUIDE_OBJECTS.contains(groundObject.getId()))
-		{
-			guideMarkers.add(groundObject);
-		}
 	}
 
 	@Subscribe
@@ -361,14 +219,37 @@ public class MinimalistPlugin extends Plugin
 			return !hiddenNpcIds.contains(((NPC) renderable).getId());
 		}
 
-		return !hiddenStatueRenderables.contains(renderable);
+		if (renderable instanceof DynamicObject)
+		{
+			return shouldDrawDynamicObject((DynamicObject) renderable);
+		}
+
+		return true;
+	}
+
+	/**
+	 * The guardian statues stay in the scene for the whole game and signal active vs
+	 * inactive purely through their animation, which is unique to them — so inactive
+	 * statues are identified and skipped right here, with no object tracking at all.
+	 */
+	private boolean shouldDrawDynamicObject(DynamicObject dynamicObject)
+	{
+		if (!hideInactiveStatues)
+		{
+			return true;
+		}
+
+		Animation animation = dynamicObject.getAnimation();
+		boolean isInactiveStatue = animation != null
+			&& animation.getId() == GuardiansOfTheRift.INACTIVE_GUARDIAN_ANIMATION;
+		return !isInactiveStatue;
 	}
 
 	private void hideIfCurated(TileObject spawnedObject, Tile tile)
 	{
 		recordIfUncuratedGotrObject(spawnedObject);
 
-		if (hiddenObjectIds.isEmpty() || !isCuratedObject(spawnedObject))
+		if (!isHiddenObject(spawnedObject))
 		{
 			return;
 		}
@@ -376,11 +257,26 @@ public class MinimalistPlugin extends Plugin
 		removeFromScene(spawnedObject, tile);
 	}
 
-	private boolean isCuratedObject(TileObject spawnedObject)
+	private boolean isHiddenObject(TileObject spawnedObject)
 	{
-		// exact spawned-id matching only: curated sets deliberately exclude multiloc
-		// bases, so transformed states are never hidden by accident
-		return hiddenObjectIds.contains(spawnedObject.getId());
+		int objectId = spawnedObject.getId();
+		if (hiddenObjectIds.contains(objectId))
+		{
+			return true;
+		}
+
+		// generic world IDs are hidden only inside their intended regions
+		boolean isAltarScenery = hideAltarScenery
+			&& GuardiansOfTheRift.ALTAR_SCENERY_OBJECTS.contains(objectId)
+			&& GuardiansOfTheRift.ALTAR_REGIONS.contains(spawnedObject.getWorldLocation().getRegionID());
+		if (isAltarScenery)
+		{
+			return true;
+		}
+
+		return hideArenaGenericScenery
+			&& GuardiansOfTheRift.ARENA_GENERIC_SCENERY_OBJECTS.contains(objectId)
+			&& spawnedObject.getWorldLocation().getRegionID() == GuardiansOfTheRift.ARENA_REGION;
 	}
 
 	private void removeFromScene(TileObject hiddenObject, Tile tile)
@@ -391,22 +287,30 @@ public class MinimalistPlugin extends Plugin
 			return;
 		}
 
+		Scene scene = worldView.getScene();
 		if (hiddenObject instanceof GameObject)
 		{
-			worldView.getScene().removeGameObject((GameObject) hiddenObject);
+			scene.removeGameObject((GameObject) hiddenObject);
 			return;
 		}
 
-		if (hiddenObject instanceof GroundObject)
-		{
-			// removing just the ground object keeps the tile's floor intact
-			tile.setGroundObject(null);
-			return;
-		}
+		removeTilePreservingFloor(scene, tile);
+	}
 
-		// Wall and decorative objects have no individual removal API; removing the
-		// tile takes everything on it with it, including the floor.
-		worldView.getScene().removeTile(tile);
+	/**
+	 * Ground, wall, and decorative objects have no individual removal API, and clearing
+	 * them off the tile does not un-draw them. Removing the whole tile does, but also
+	 * deletes the floor — so capture the floor and put it back.
+	 */
+	private static void removeTilePreservingFloor(Scene scene, Tile tile)
+	{
+		SceneTilePaint floorPaint = tile.getSceneTilePaint();
+		SceneTileModel floorModel = tile.getSceneTileModel();
+
+		scene.removeTile(tile);
+
+		tile.setSceneTilePaint(floorPaint);
+		tile.setSceneTileModel(floorModel);
 	}
 
 	private void setWidgetHidden(int componentId, boolean hidden)
@@ -446,57 +350,16 @@ public class MinimalistPlugin extends Plugin
 		logUncuratedGotrObjects();
 	}
 
-	// TODO temporary diagnostics: inventory of visible uncurated objects while the GOTR
-	// scene is loaded (arena + mines), logged once per rescan; remove before hub submission
-	private final Map<Integer, String> diagUncuratedById = new HashMap<>();
-	private boolean diagSceneIsGotr;
-
-	private void recordIfUncuratedGotrObject(TileObject tileObject)
-	{
-		boolean isCurated = hiddenObjectIds.contains(tileObject.getId())
-			|| GuardiansOfTheRift.GUIDE_OBJECTS.contains(tileObject.getId())
-			|| GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(tileObject.getId());
-		if (!diagSceneIsGotr || isCurated)
-		{
-			return;
-		}
-
-		diagUncuratedById.put(tileObject.getId(),
-			client.getObjectDefinition(tileObject.getId()).getName() + "/" + tileObject.getClass().getSimpleName());
-	}
-
-	private void logUncuratedGotrObjects()
-	{
-		if (diagUncuratedById.isEmpty())
-		{
-			return;
-		}
-
-		log.info("[minimalist-diag] uncurated GOTR objects ({}): {}", diagUncuratedById.size(),
-			new java.util.TreeMap<>(diagUncuratedById));
-		diagUncuratedById.clear();
-	}
-
 	private void scanTile(Tile tile)
 	{
-		GroundObject groundObject = tile.getGroundObject();
-		if (groundObject != null)
-		{
-			trackIfGuideMarker(groundObject);
-		}
-
-		Stream.of(tile.getWallObject(), tile.getDecorativeObject(), groundObject)
+		Stream.of(tile.getWallObject(), tile.getDecorativeObject(), tile.getGroundObject())
 			.filter(Objects::nonNull)
 			.forEach(tileObject -> hideIfCurated(tileObject, tile));
 
 		Arrays.stream(tile.getGameObjects())
 			.filter(Objects::nonNull)
 			.filter(gameObject -> isPrimaryTile(gameObject, tile))
-			.forEach(gameObject ->
-			{
-				trackIfGuardianStatue(gameObject);
-				hideIfCurated(gameObject, tile);
-			});
+			.forEach(gameObject -> hideIfCurated(gameObject, tile));
 	}
 
 	/**
@@ -510,7 +373,8 @@ public class MinimalistPlugin extends Plugin
 	private void rebuildHiddenSets()
 	{
 		hideInactiveStatues = config.gotrGuardianStatues();
-		hideGuideMarkers = config.gotrBarriersAndCells();
+		hideAltarScenery = config.gotrAltarScenery();
+		hideArenaGenericScenery = config.gotrAbyssScenery();
 		hiddenObjectIds = union(
 			toggled(config.gotrAbyssScenery(), GuardiansOfTheRift.ABYSS_SCENERY_OBJECTS),
 			toggled(config.gotrGuardianRemains(), GuardiansOfTheRift.GUARDIAN_REMAINS_OBJECTS),
@@ -543,5 +407,38 @@ public class MinimalistPlugin extends Plugin
 		return Stream.of(sets)
 			.flatMap(Set::stream)
 			.collect(Collectors.toUnmodifiableSet());
+	}
+
+	// TODO temporary diagnostics: inventory of visible uncurated objects while the GOTR
+	// scene is loaded (arena + mines), logged once per rescan; remove before hub submission
+	private final Map<Integer, String> diagUncuratedById = new HashMap<>();
+	private boolean diagSceneIsGotr;
+
+	private void recordIfUncuratedGotrObject(TileObject tileObject)
+	{
+		boolean isCurated = hiddenObjectIds.contains(tileObject.getId())
+			|| GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(tileObject.getId())
+			|| GuardiansOfTheRift.ALTAR_SCENERY_OBJECTS.contains(tileObject.getId())
+			|| GuardiansOfTheRift.ARENA_GENERIC_SCENERY_OBJECTS.contains(tileObject.getId());
+		if (!diagSceneIsGotr || isCurated)
+		{
+			return;
+		}
+
+		diagUncuratedById.put(tileObject.getId(),
+			client.getObjectDefinition(tileObject.getId()).getName() + "/" + tileObject.getClass().getSimpleName());
+	}
+
+	private void logUncuratedGotrObjects()
+	{
+		if (diagUncuratedById.isEmpty())
+		{
+			return;
+		}
+
+		log.info("[minimalist-diag] uncurated GOTR objects ({}) regions={}: {}", diagUncuratedById.size(),
+			Arrays.toString(client.getTopLevelWorldView().getScene().getMapRegions()),
+			new java.util.TreeMap<>(diagUncuratedById));
+		diagUncuratedById.clear();
 	}
 }
