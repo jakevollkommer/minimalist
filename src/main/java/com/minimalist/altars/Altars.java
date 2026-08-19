@@ -42,19 +42,25 @@ public final class Altars
 		new FireAltar(), new BodyAltar(), new CosmicAltar(), new ChaosAltar(),
 		new NatureAltar(), new LawAltar(), new DeathAltar(), new BloodAltar());
 
-	/**
-	 * Every region an altar's scene may span: the base region plus its eight neighbors.
-	 * Altar rooms sit in otherwise-empty map space, so the neighbors are always safe.
-	 */
-	private static final Map<Integer, AltarRoom> ALTAR_BY_REGION = ALL.stream()
-		.flatMap(altar -> regionWithNeighbors(altar.baseRegion())
-			.map(region -> Map.entry(region, altar)))
-		.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+	private static final Map<Integer, AltarRoom> ALTAR_BY_BASE_REGION = ALL.stream()
+		.collect(Collectors.toUnmodifiableMap(AltarRoom::baseRegion, altar -> altar));
 
-	private static Stream<Integer> regionWithNeighbors(int baseRegion)
+	/**
+	 * Neighbor regions an altar's scene may also span. The classic altars form a chain
+	 * of adjacent regions, so one altar's neighbor is often another altar's base region
+	 * — base regions always win, and overlapping neighbor claims keep the first owner.
+	 */
+	private static final Map<Integer, AltarRoom> ALTAR_BY_NEIGHBOR_REGION = ALL.stream()
+		.flatMap(altar -> neighborsOf(altar.baseRegion())
+			.map(region -> Map.entry(region, altar)))
+		.filter(entry -> !ALTAR_BY_BASE_REGION.containsKey(entry.getKey()))
+		.collect(Collectors.toUnmodifiableMap(
+			Map.Entry::getKey, Map.Entry::getValue, (firstOwner, otherOwner) -> firstOwner));
+
+	private static Stream<Integer> neighborsOf(int baseRegion)
 	{
 		return Stream.of(
-			baseRegion, baseRegion + 1, baseRegion - 1,
+			baseRegion + 1, baseRegion - 1,
 			baseRegion + 256, baseRegion - 256,
 			baseRegion + 257, baseRegion - 257,
 			baseRegion + 255, baseRegion - 255);
@@ -62,14 +68,31 @@ public final class Altars
 
 	/**
 	 * The altar the loaded scene belongs to, or null when the scene is not an altar.
-	 * Resolves from the Scene itself so it is correct even during scene upload.
+	 * Resolves from the Scene itself so it is correct even during scene upload. Base
+	 * regions are checked before neighbor regions so adjacent altars never shadow
+	 * each other.
 	 */
 	@Nullable
 	public static AltarRoom forScene(Scene scene)
 	{
-		for (int regionId : scene.getMapRegions())
+		int[] sceneRegions = scene.getMapRegions();
+		if (sceneRegions == null)
 		{
-			AltarRoom altar = ALTAR_BY_REGION.get(regionId);
+			return null;
+		}
+
+		for (int regionId : sceneRegions)
+		{
+			AltarRoom altar = ALTAR_BY_BASE_REGION.get(regionId);
+			if (altar != null)
+			{
+				return altar;
+			}
+		}
+
+		for (int regionId : sceneRegions)
+		{
+			AltarRoom altar = ALTAR_BY_NEIGHBOR_REGION.get(regionId);
 			if (altar != null)
 			{
 				return altar;
