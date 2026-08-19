@@ -103,6 +103,56 @@ final class GuardiansOfTheRift
 	/** The animation a guardian statue plays while its altar is active. */
 	static final int ACTIVE_GUARDIAN_ANIMATION = 9363;
 
+	/** The HUD update clientscript; its args carry the live game state. */
+	static final int HUD_UPDATE_SCRIPT = 5980;
+	/** Index into the HUD script args holding the active elemental altar (1-4, 0 = none). */
+	static final int HUD_ARG_ACTIVE_ELEMENTAL = 6;
+	/** Index into the HUD script args holding the active catalytic altar (1-8, 0 = none). */
+	static final int HUD_ARG_ACTIVE_CATALYTIC = 7;
+
+	/** Active elemental altar index (from the HUD script) to statue object id. */
+	static final java.util.Map<Integer, Integer> ELEMENTAL_STATUE_BY_INDEX = java.util.Map.of(
+		1, 43701, 2, 43702, 3, 43703, 4, 43704);
+
+	/** Active catalytic altar index (from the HUD script) to statue object id. */
+	static final java.util.Map<Integer, Integer> CATALYTIC_STATUE_BY_INDEX = java.util.Map.of(
+		1, 43705, 2, 43709, 3, 43710, 4, 43706, 5, 43711, 6, 43712, 7, 43707, 8, 43708);
+
+	/** The pedestal model shared by all guardian statues. */
+	static final int STATUE_PEDESTAL_MODEL = 43995;
+
+	/** Each statue's rune-specific top model, merged with the pedestal for stand-ins. */
+	static final java.util.Map<Integer, Integer> RUNE_MODEL_BY_STATUE = java.util.Map.ofEntries(
+		java.util.Map.entry(43701, 43983), // Air
+		java.util.Map.entry(43702, 43985), // Water
+		java.util.Map.entry(43703, 43991), // Earth
+		java.util.Map.entry(43704, 43984), // Fire
+		java.util.Map.entry(43705, 43989), // Mind
+		java.util.Map.entry(43706, 43990), // Chaos
+		java.util.Map.entry(43707, 43988), // Death
+		java.util.Map.entry(43708, 43993), // Blood
+		java.util.Map.entry(43709, 43980), // Body
+		java.util.Map.entry(43710, 43986), // Cosmic
+		java.util.Map.entry(43711, 43994), // Nature
+		java.util.Map.entry(43712, 43987)  // Law
+	);
+
+	/** Statue object id to guardian name, for synthesized menu entries. */
+	static final java.util.Map<Integer, String> STATUE_NAMES = java.util.Map.ofEntries(
+		java.util.Map.entry(43701, "Guardian of Air"),
+		java.util.Map.entry(43702, "Guardian of Water"),
+		java.util.Map.entry(43703, "Guardian of Earth"),
+		java.util.Map.entry(43704, "Guardian of Fire"),
+		java.util.Map.entry(43705, "Guardian of Mind"),
+		java.util.Map.entry(43706, "Guardian of Chaos"),
+		java.util.Map.entry(43707, "Guardian of Death"),
+		java.util.Map.entry(43708, "Guardian of Blood"),
+		java.util.Map.entry(43709, "Guardian of Body"),
+		java.util.Map.entry(43710, "Guardian of Cosmic"),
+		java.util.Map.entry(43711, "Guardian of Nature"),
+		java.util.Map.entry(43712, "Guardian of Law")
+	);
+
 	/**
 	 * The animation a guardian statue plays while INACTIVE. Unique to the statues, so
 	 * the draw listener can identify an inactive statue purely by this animation.

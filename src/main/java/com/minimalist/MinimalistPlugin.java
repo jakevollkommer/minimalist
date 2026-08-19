@@ -27,32 +27,41 @@ package com.minimalist;
 import com.google.inject.Provides;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+import lombok.Value;
 import net.runelite.api.Animation;
 import net.runelite.api.Client;
-import net.runelite.api.DynamicObject;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.MenuAction;
 import net.runelite.api.NPC;
 import net.runelite.api.Projectile;
 import net.runelite.api.Renderable;
+import net.runelite.api.RuneLiteObject;
 import net.runelite.api.Scene;
 import net.runelite.api.SceneTileModel;
 import net.runelite.api.SceneTilePaint;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
 import net.runelite.api.WorldView;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.DecorativeObjectSpawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GroundObjectSpawned;
+import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.events.MenuEntryAdded;
+import net.runelite.api.events.ScriptPreFired;
 import net.runelite.api.events.WallObjectSpawned;
+import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.callback.Hooks;
@@ -81,6 +90,15 @@ public class MinimalistPlugin extends Plugin
 	private boolean hideAltarScenery;
 	private boolean hideArenaGenericScenery;
 
+	// --- guardian statue stand-ins ---
+	// The real statues are removed from the scene; client-side stand-in models are
+	// rendered for the two active guardians and any guardian whose portal talisman is
+	// in the inventory. Active state comes from the HUD update script, event-driven.
+	private final Map<Integer, StatueSite> statueSites = new HashMap<>();
+	private final Map<Integer, RuneLiteObject> standIns = new HashMap<>();
+	private final Set<Integer> heldTalismanStatues = new HashSet<>();
+	private int activeElementalStatue = -1;
+	private int activeCatalyticStatue = -1;
 
 	private final Hooks.RenderableDrawListener drawListener = this::shouldDraw;
 
@@ -109,6 +127,7 @@ public class MinimalistPlugin extends Plugin
 		clientThread.invokeLater(() ->
 		{
 			rebuildHiddenSets();
+			refreshHeldTalismans();
 			rescanSceneIfLoggedIn();
 		});
 	}
@@ -120,11 +139,13 @@ public class MinimalistPlugin extends Plugin
 		clientThread.invokeLater(() ->
 		{
 			Set<Integer> widgetsToRestore = hiddenWidgetComponents;
-			boolean objectsWereHidden = !hiddenObjectIds.isEmpty();
+			boolean objectsWereHidden = !hiddenObjectIds.isEmpty() || hideInactiveStatues;
 			hiddenObjectIds = Set.of();
 			hiddenNpcIds = Set.of();
 			hiddenWidgetComponents = Set.of();
 			hideInactiveStatues = false;
+			clearStandIns();
+			statueSites.clear();
 
 			widgetsToRestore.forEach(component -> setWidgetHidden(component, false));
 			if (objectsWereHidden && client.getGameState() == GameState.LOGGED_IN)
@@ -151,6 +172,7 @@ public class MinimalistPlugin extends Plugin
 		Set<Integer> previousWidgets = hiddenWidgetComponents;
 		boolean previousAltarScenery = hideAltarScenery;
 		boolean previousArenaGenerics = hideArenaGenericScenery;
+		boolean previousStatues = hideInactiveStatues;
 		rebuildHiddenSets();
 
 		previousWidgets.stream()
@@ -166,7 +188,8 @@ public class MinimalistPlugin extends Plugin
 		// to the hidden object sets is applied through a reload
 		boolean objectSetChanged = !previousObjectIds.equals(hiddenObjectIds)
 			|| previousAltarScenery != hideAltarScenery
-			|| previousArenaGenerics != hideArenaGenericScenery;
+			|| previousArenaGenerics != hideArenaGenericScenery
+			|| previousStatues != hideInactiveStatues;
 		if (objectSetChanged)
 		{
 			client.setGameState(GameState.LOADING);
@@ -178,7 +201,8 @@ public class MinimalistPlugin extends Plugin
 	{
 		if (event.getGameState() == GameState.LOADING)
 		{
-			diagStatues.clear();
+			statueSites.clear();
+			clearStandIns();
 			return;
 		}
 
@@ -193,11 +217,7 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onGameObjectSpawned(GameObjectSpawned event)
 	{
-		if (GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(event.getGameObject().getId()))
-		{
-			diagStatues.add(event.getGameObject());
-		}
-
+		captureIfStatue(event.getGameObject());
 		hideIfCurated(event.getGameObject(), event.getTile());
 	}
 
@@ -227,104 +247,192 @@ public class MinimalistPlugin extends Plugin
 		hiddenWidgetComponents.forEach(component -> setWidgetHidden(component, true));
 	}
 
-	/**
-	 * Inactive statues cannot be visually hidden (the renderer never routes scenery
-	 * through the draw callback), but their menu entries can be stripped so only the
-	 * two active guardians are clickable. Checked on demand while the menu is built.
-	 */
 	@Subscribe
-	public void onPostMenuSort(net.runelite.api.events.PostMenuSort event)
+	public void onScriptPreFired(ScriptPreFired event)
+	{
+		if (event.getScriptId() != GuardiansOfTheRift.HUD_UPDATE_SCRIPT)
+		{
+			return;
+		}
+
+		Object[] arguments = event.getScriptEvent().getArguments();
+		if (arguments == null || arguments.length <= GuardiansOfTheRift.HUD_ARG_ACTIVE_CATALYTIC)
+		{
+			return;
+		}
+
+		int elementalIndex = asInt(arguments[GuardiansOfTheRift.HUD_ARG_ACTIVE_ELEMENTAL]);
+		int catalyticIndex = asInt(arguments[GuardiansOfTheRift.HUD_ARG_ACTIVE_CATALYTIC]);
+		int newElemental = GuardiansOfTheRift.ELEMENTAL_STATUE_BY_INDEX.getOrDefault(elementalIndex, -1);
+		int newCatalytic = GuardiansOfTheRift.CATALYTIC_STATUE_BY_INDEX.getOrDefault(catalyticIndex, -1);
+		boolean changed = newElemental != activeElementalStatue || newCatalytic != activeCatalyticStatue;
+		if (!changed)
+		{
+			return;
+		}
+
+		activeElementalStatue = newElemental;
+		activeCatalyticStatue = newCatalytic;
+		updateStandIns();
+	}
+
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event)
+	{
+		if (event.getContainerId() != InventoryID.INV)
+		{
+			return;
+		}
+
+		refreshHeldTalismans();
+		updateStandIns();
+	}
+
+	private void refreshHeldTalismans()
+	{
+		heldTalismanStatues.clear();
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		if (inventory == null)
+		{
+			return;
+		}
+
+		GuardiansOfTheRift.TALISMAN_BY_STATUE.forEach((statueId, talismanId) ->
+		{
+			if (inventory.contains(talismanId))
+			{
+				heldTalismanStatues.add(statueId);
+			}
+		});
+	}
+
+	private void captureIfStatue(GameObject gameObject)
+	{
+		if (!GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(gameObject.getId()))
+		{
+			return;
+		}
+
+		statueSites.put(gameObject.getId(), new StatueSite(
+			gameObject.getLocalLocation(), gameObject.getPlane(), gameObject.getOrientation()));
+	}
+
+	private void updateStandIns()
+	{
+		Set<Integer> desired = desiredVisibleStatues();
+
+		standIns.entrySet().removeIf(entry ->
+		{
+			if (desired.contains(entry.getKey()))
+			{
+				return false;
+			}
+
+			entry.getValue().setActive(false);
+			return true;
+		});
+
+		desired.forEach(this::ensureStandIn);
+	}
+
+	private Set<Integer> desiredVisibleStatues()
 	{
 		if (!hideInactiveStatues || !sceneIsGotr)
 		{
-			return;
+			return Set.of();
 		}
 
-		net.runelite.api.MenuEntry[] entries = client.getMenuEntries();
-		// cheap scan first: PostMenuSort runs every frame, so only allocate when needed
-		boolean hasInactiveStatueEntry = false;
-		for (net.runelite.api.MenuEntry entry : entries)
+		Set<Integer> desired = new HashSet<>(heldTalismanStatues);
+		if (activeElementalStatue != -1)
 		{
-			if (isInactiveStatueEntry(entry))
-			{
-				hasInactiveStatueEntry = true;
-				break;
-			}
+			desired.add(activeElementalStatue);
 		}
-
-		if (!hasInactiveStatueEntry)
+		if (activeCatalyticStatue != -1)
 		{
-			return;
+			desired.add(activeCatalyticStatue);
 		}
 
-		client.setMenuEntries(Arrays.stream(entries)
-			.filter(entry -> !isInactiveStatueEntry(entry))
-			.toArray(net.runelite.api.MenuEntry[]::new));
+		desired.retainAll(statueSites.keySet());
+		return desired;
 	}
 
-	private boolean isInactiveStatueEntry(net.runelite.api.MenuEntry entry)
+	private void ensureStandIn(int statueId)
 	{
-		if (!GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(entry.getIdentifier()))
+		StatueSite site = statueSites.get(statueId);
+		RuneLiteObject standIn = standIns.get(statueId);
+		if (standIn == null)
 		{
-			return false;
+			standIn = client.createRuneLiteObject();
+			standIn.setModel(client.mergeModels(
+				client.loadModelData(GuardiansOfTheRift.STATUE_PEDESTAL_MODEL),
+				client.loadModelData(GuardiansOfTheRift.RUNE_MODEL_BY_STATUE.get(statueId))).light());
+			standIn.setLocation(site.getLocalPoint(), site.getPlane());
+			standIn.setOrientation(site.getOrientation());
+			standIn.setShouldLoop(true);
+			standIn.setActive(true);
+			standIns.put(statueId, standIn);
 		}
 
-		if (!isObjectAction(entry.getType()))
+		boolean isActivePair = statueId == activeElementalStatue || statueId == activeCatalyticStatue;
+		int animationId = isActivePair
+			? GuardiansOfTheRift.ACTIVE_GUARDIAN_ANIMATION
+			: GuardiansOfTheRift.INACTIVE_GUARDIAN_ANIMATION;
+		Animation currentAnimation = standIn.getAnimation();
+		if (currentAnimation == null || currentAnimation.getId() != animationId)
 		{
-			return false;
+			standIn.setAnimation(client.loadAnimation(animationId));
+		}
+	}
+
+	private void clearStandIns()
+	{
+		standIns.values().forEach(standIn -> standIn.setActive(false));
+		standIns.clear();
+	}
+
+	/**
+	 * The real statues are gone from the scene, so a synthesized Enter entry is added
+	 * when hovering a stand-in's tile. The click fires the original object action; the
+	 * object still exists server-side.
+	 */
+	@Subscribe
+	public void onMenuEntryAdded(MenuEntryAdded event)
+	{
+		if (event.getType() != MenuAction.WALK.getId() || standIns.isEmpty())
+		{
+			return;
 		}
 
-		// holding the matching portal talisman allows entering an inactive guardian
-		if (isHoldingTalismanFor(entry.getIdentifier()))
-		{
-			return false;
-		}
-
-		return diagStatues.stream()
-			.filter(statue -> statue.getId() == entry.getIdentifier())
+		standIns.keySet().stream()
+			.filter(statueId -> isSiteAt(statueId, event.getActionParam0(), event.getActionParam1()))
 			.findFirst()
-			.map(statue -> !isStatueActive(statue))
-			.orElse(false);
+			.ifPresent(statueId -> addEnterEntry(statueId, event));
 	}
 
-	private boolean isHoldingTalismanFor(int statueObjectId)
+	private boolean isSiteAt(int statueId, int sceneX, int sceneY)
 	{
-		Integer talismanItemId = GuardiansOfTheRift.TALISMAN_BY_STATUE.get(statueObjectId);
-		if (talismanItemId == null)
-		{
-			return false;
-		}
-
-		net.runelite.api.ItemContainer inventory = client.getItemContainer(net.runelite.api.gameval.InventoryID.INV);
-		return inventory != null && inventory.contains(talismanItemId);
+		StatueSite site = statueSites.get(statueId);
+		return site != null
+			&& site.getLocalPoint().getSceneX() == sceneX
+			&& site.getLocalPoint().getSceneY() == sceneY;
 	}
 
-	private static boolean isObjectAction(net.runelite.api.MenuAction action)
+	private void addEnterEntry(int statueId, MenuEntryAdded event)
 	{
-		switch (action)
-		{
-			case GAME_OBJECT_FIRST_OPTION:
-			case GAME_OBJECT_SECOND_OPTION:
-			case GAME_OBJECT_THIRD_OPTION:
-			case GAME_OBJECT_FOURTH_OPTION:
-			case GAME_OBJECT_FIFTH_OPTION:
-			case EXAMINE_OBJECT:
-				return true;
-			default:
-				return false;
-		}
-	}
-
-	private static boolean isStatueActive(GameObject statue)
-	{
-		Renderable renderable = statue.getRenderable();
-		if (!(renderable instanceof DynamicObject))
-		{
-			return true;
-		}
-
-		Animation animation = ((DynamicObject) renderable).getAnimation();
-		return animation != null && animation.getId() == GuardiansOfTheRift.ACTIVE_GUARDIAN_ANIMATION;
+		StatueSite site = statueSites.get(statueId);
+		String target = "<col=ffff>" + GuardiansOfTheRift.STATUE_NAMES.get(statueId);
+		client.createMenuEntry(-1)
+			.setOption("Enter")
+			.setTarget(target)
+			.setType(MenuAction.RUNELITE)
+			.onClick(entry -> client.menuAction(
+				site.getLocalPoint().getSceneX(),
+				site.getLocalPoint().getSceneY(),
+				MenuAction.GAME_OBJECT_FIRST_OPTION,
+				statueId,
+				-1,
+				"Enter",
+				target));
 	}
 
 	private boolean shouldDraw(Renderable renderable, boolean drawingUi)
@@ -339,39 +447,7 @@ public class MinimalistPlugin extends Plugin
 			return !(hideProjectiles && sceneIsGotr);
 		}
 
-		if (renderable instanceof DynamicObject)
-		{
-			return shouldDrawDynamicObject((DynamicObject) renderable);
-		}
-
 		return true;
-	}
-
-	/**
-	 * The guardian statues stay in the scene for the whole game and signal active vs
-	 * inactive purely through their animation, which is unique to them — so inactive
-	 * statues are identified and skipped right here, with no object tracking at all.
-	 */
-	private boolean shouldDrawDynamicObject(DynamicObject dynamicObject)
-	{
-		diagDynamicDraws.incrementAndGet();
-		if (!hideInactiveStatues)
-		{
-			return true;
-		}
-
-		Animation animation = dynamicObject.getAnimation();
-		boolean isStatueAnimation = animation != null
-			&& (animation.getId() == GuardiansOfTheRift.INACTIVE_GUARDIAN_ANIMATION
-				|| animation.getId() == GuardiansOfTheRift.ACTIVE_GUARDIAN_ANIMATION);
-		if (isStatueAnimation)
-		{
-			diagStatueAnimDraws.incrementAndGet();
-		}
-
-		boolean isInactiveStatue = animation != null
-			&& animation.getId() == GuardiansOfTheRift.INACTIVE_GUARDIAN_ANIMATION;
-		return !isInactiveStatue;
 	}
 
 	private void hideIfCurated(TileObject spawnedObject, Tile tile)
@@ -393,6 +469,11 @@ public class MinimalistPlugin extends Plugin
 	{
 		int objectId = spawnedObject.getId();
 		if (hiddenObjectIds.contains(objectId))
+		{
+			return true;
+		}
+
+		if (hideInactiveStatues && GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(objectId))
 		{
 			return true;
 		}
@@ -430,32 +511,6 @@ public class MinimalistPlugin extends Plugin
 		}
 
 		removeTilePreservingFloor(scene, tile);
-	}
-
-	// TODO temporary diagnostics; remove before hub submission
-	private final Map<String, Integer> diagRemovedById = new HashMap<>();
-
-	// TODO temporary diagnostics: the GOTR HUD update script carries the game state;
-	// log its argument vector on change to locate the active-altar args. Remove before
-	// hub submission.
-	private String diagPreviousScriptArgs = "";
-
-	@Subscribe
-	public void onScriptPreFired(net.runelite.api.events.ScriptPreFired event)
-	{
-		if (event.getScriptId() != 5980)
-		{
-			return;
-		}
-
-		String arguments = Arrays.toString(event.getScriptEvent().getArguments());
-		if (arguments.equals(diagPreviousScriptArgs))
-		{
-			return;
-		}
-
-		diagPreviousScriptArgs = arguments;
-		log.info("[minimalist-script] tick={} args={}", client.getTickCount(), arguments);
 	}
 
 	/**
@@ -519,6 +574,7 @@ public class MinimalistPlugin extends Plugin
 			.filter(Objects::nonNull)
 			.forEach(this::scanTile);
 
+		updateStandIns();
 		logUncuratedGotrObjects();
 	}
 
@@ -531,7 +587,11 @@ public class MinimalistPlugin extends Plugin
 		Arrays.stream(tile.getGameObjects())
 			.filter(Objects::nonNull)
 			.filter(gameObject -> isPrimaryTile(gameObject, tile))
-			.forEach(gameObject -> hideIfCurated(gameObject, tile));
+			.forEach(gameObject ->
+			{
+				captureIfStatue(gameObject);
+				hideIfCurated(gameObject, tile);
+			});
 	}
 
 	/**
@@ -582,39 +642,24 @@ public class MinimalistPlugin extends Plugin
 			.collect(Collectors.toUnmodifiableSet());
 	}
 
+	private static int asInt(Object argument)
+	{
+		return argument instanceof Integer ? (Integer) argument : Integer.parseInt(argument.toString());
+	}
+
+	@Value
+	private static class StatueSite
+	{
+		LocalPoint localPoint;
+		int plane;
+		int orientation;
+	}
+
 	// TODO temporary diagnostics: inventory of visible uncurated objects while the GOTR
 	// scene is loaded (arena + mines), logged once per rescan; remove before hub submission
 	private final Map<Integer, String> diagUncuratedById = new HashMap<>();
 	private boolean diagSceneIsGotr;
-
-	// TODO temporary diagnostics: statue draw-callback coverage; remove before hub submission
-	private final java.util.concurrent.atomic.AtomicInteger diagDynamicDraws = new java.util.concurrent.atomic.AtomicInteger();
-	private final java.util.concurrent.atomic.AtomicInteger diagStatueAnimDraws = new java.util.concurrent.atomic.AtomicInteger();
-	private final Set<GameObject> diagStatues = new java.util.HashSet<>();
-
-	private String diagPreviousActive = "";
-
-	@Subscribe
-	public void onGameTick(net.runelite.api.events.GameTick event)
-	{
-		if (diagStatues.isEmpty())
-		{
-			return;
-		}
-
-		String activeStatues = diagStatues.stream()
-			.filter(MinimalistPlugin::isStatueActive)
-			.map(statue -> String.valueOf(statue.getId()))
-			.sorted()
-			.collect(Collectors.joining(","));
-		if (activeStatues.equals(diagPreviousActive))
-		{
-			return;
-		}
-
-		diagPreviousActive = activeStatues;
-		log.info("[minimalist-rotation] tick={} active=[{}]", client.getTickCount(), activeStatues);
-	}
+	private final Map<String, Integer> diagRemovedById = new HashMap<>();
 
 	private void recordIfUncuratedGotrObject(TileObject tileObject)
 	{

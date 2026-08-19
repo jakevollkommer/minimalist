@@ -47,7 +47,7 @@ public interface MinimalistConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrGuardianStatues", name = "Hide inactive guardian statues", description = "Hide Guardian of Air/Water/... statues while inactive; active ones always show", section = gotrSection, position = 1)
+	@ConfigItem(keyName = "gotrGuardianStatues", name = "Hide inactive guardian statues", description = "Show only the two active guardians (and any whose portal talisman you hold) as client-side stand-ins; all other statues are hidden", section = gotrSection, position = 1)
 	default boolean gotrGuardianStatues()
 	{
 		return true;
