@@ -68,37 +68,24 @@ public final class Altars
 	}
 
 	/**
-	 * True when this object is altar decoration to hide in the loaded scene. Adjacent
-	 * altars often share a scene (their regions neighbor each other), so EVERY altar
-	 * present in the scene contributes its distinctive scenery — never just the first
-	 * match. Resolves from the Scene itself so it is correct even during scene upload,
-	 * and allocates nothing (it runs per object).
+	 * Every decorative ID across all altar rooms. Decoration IDs recur between rooms
+	 * (waterlilies at non-water altars, bloodsplatters outside death), so matching uses
+	 * this union whenever ANY altar scene is loaded — per-altar lists exist to document
+	 * where each ID was observed, never to scope hiding.
+	 */
+	private static final Set<Integer> ALL_ALTAR_SCENERY = Stream.concat(
+			SharedAltarScenery.OBJECTS.stream(),
+			ALL.stream().flatMap(altar -> altar.distinctiveScenery().stream()))
+		.collect(Collectors.toUnmodifiableSet());
+
+	/**
+	 * True when this object is altar decoration to hide in the loaded scene. Resolves
+	 * from the Scene itself so it is correct even during scene upload, and allocates
+	 * nothing (it runs per object).
 	 */
 	public static boolean isAltarSceneryInScene(Scene scene, int objectId)
 	{
-		int[] sceneRegions = scene.getMapRegions();
-		if (sceneRegions == null)
-		{
-			return false;
-		}
-
-		boolean sceneHasAnyAltar = false;
-		for (int regionId : sceneRegions)
-		{
-			AltarRoom altar = altarForRegion(regionId);
-			if (altar == null)
-			{
-				continue;
-			}
-
-			sceneHasAnyAltar = true;
-			if (altar.distinctiveScenery().contains(objectId))
-			{
-				return true;
-			}
-		}
-
-		return sceneHasAnyAltar && SharedAltarScenery.OBJECTS.contains(objectId);
+		return ALL_ALTAR_SCENERY.contains(objectId) && hasAltarInScene(scene);
 	}
 
 	/**
