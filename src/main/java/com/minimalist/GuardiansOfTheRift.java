@@ -170,6 +170,8 @@ final class GuardiansOfTheRift
 		731, 732, // unnamed
 		736, // Animal skull
 		982, 984, 985, 986, // unnamed
+		1189, // Daisies
+		1246, 1247, // unnamed
 		1448, 1449, 1450, 1451, 1502, 1503, // unnamed
 		1688, 1689, 1690, // unnamed wall decor
 		16318, // unnamed

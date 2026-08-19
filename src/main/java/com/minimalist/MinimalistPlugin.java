@@ -81,6 +81,7 @@ public class MinimalistPlugin extends Plugin
 	private boolean hideAltarScenery;
 	private boolean hideArenaGenericScenery;
 
+
 	private final Hooks.RenderableDrawListener drawListener = this::shouldDraw;
 
 	@Inject
@@ -226,6 +227,88 @@ public class MinimalistPlugin extends Plugin
 		hiddenWidgetComponents.forEach(component -> setWidgetHidden(component, true));
 	}
 
+	/**
+	 * Inactive statues cannot be visually hidden (the renderer never routes scenery
+	 * through the draw callback), but their menu entries can be stripped so only the
+	 * two active guardians are clickable. Checked on demand while the menu is built.
+	 */
+	@Subscribe
+	public void onPostMenuSort(net.runelite.client.events.PostMenuSort event)
+	{
+		if (!hideInactiveStatues || !sceneIsGotr)
+		{
+			return;
+		}
+
+		net.runelite.api.MenuEntry[] entries = client.getMenuEntries();
+		// cheap scan first: PostMenuSort runs every frame, so only allocate when needed
+		boolean hasInactiveStatueEntry = false;
+		for (net.runelite.api.MenuEntry entry : entries)
+		{
+			if (isInactiveStatueEntry(entry))
+			{
+				hasInactiveStatueEntry = true;
+				break;
+			}
+		}
+
+		if (!hasInactiveStatueEntry)
+		{
+			return;
+		}
+
+		client.setMenuEntries(Arrays.stream(entries)
+			.filter(entry -> !isInactiveStatueEntry(entry))
+			.toArray(net.runelite.api.MenuEntry[]::new));
+	}
+
+	private boolean isInactiveStatueEntry(net.runelite.api.MenuEntry entry)
+	{
+		if (!GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(entry.getIdentifier()))
+		{
+			return false;
+		}
+
+		if (!isObjectAction(entry.getType()))
+		{
+			return false;
+		}
+
+		return diagStatues.stream()
+			.filter(statue -> statue.getId() == entry.getIdentifier())
+			.findFirst()
+			.map(statue -> !isStatueActive(statue))
+			.orElse(false);
+	}
+
+	private static boolean isObjectAction(net.runelite.api.MenuAction action)
+	{
+		switch (action)
+		{
+			case GAME_OBJECT_FIRST_OPTION:
+			case GAME_OBJECT_SECOND_OPTION:
+			case GAME_OBJECT_THIRD_OPTION:
+			case GAME_OBJECT_FOURTH_OPTION:
+			case GAME_OBJECT_FIFTH_OPTION:
+			case EXAMINE_OBJECT:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	private static boolean isStatueActive(GameObject statue)
+	{
+		Renderable renderable = statue.getRenderable();
+		if (!(renderable instanceof DynamicObject))
+		{
+			return true;
+		}
+
+		Animation animation = ((DynamicObject) renderable).getAnimation();
+		return animation != null && animation.getId() == GuardiansOfTheRift.ACTIVE_GUARDIAN_ANIMATION;
+	}
+
 	private boolean shouldDraw(Renderable renderable, boolean drawingUi)
 	{
 		if (renderable instanceof NPC)
@@ -277,7 +360,10 @@ public class MinimalistPlugin extends Plugin
 	{
 		recordIfUncuratedGotrObject(spawnedObject);
 
-		if (!isHiddenObject(spawnedObject))
+		// Removing during a scene load strips the tile references without affecting
+		// rendering, which then blinds the post-load rescan — the only pass whose
+		// removals visually stick. So removal only ever happens after the load.
+		if (client.getGameState() != GameState.LOGGED_IN || !isHiddenObject(spawnedObject))
 		{
 			return;
 		}
