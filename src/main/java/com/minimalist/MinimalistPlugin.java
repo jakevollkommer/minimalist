@@ -105,6 +105,11 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	private RenderCallbackManager renderCallbackManager;
 
 	@Inject
+	private net.runelite.client.ui.ClientToolbar clientToolbar;
+
+	private net.runelite.client.ui.NavigationButton navigationButton;
+
+	@Inject
 	private MinimalistConfig config;
 
 	@Provides
@@ -117,6 +122,13 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	protected void startUp()
 	{
 		renderCallbackManager.register(this);
+		navigationButton = net.runelite.client.ui.NavigationButton.builder()
+			.tooltip("Minimalist")
+			.icon(net.runelite.client.util.ImageUtil.loadImageResource(MinimalistPlugin.class, "panel_icon.png"))
+			.priority(9)
+			.panel(new MinimalistPanel())
+			.build();
+		clientToolbar.addNavigation(navigationButton);
 		clientThread.invokeLater(() ->
 		{
 			rebuildHiddenSets();
@@ -130,6 +142,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	protected void shutDown()
 	{
 		renderCallbackManager.unregister(this);
+		clientToolbar.removeNavigation(navigationButton);
 		clientThread.invokeLater(() ->
 		{
 			Set<Integer> widgetsToRestore = hiddenWidgetComponents;
