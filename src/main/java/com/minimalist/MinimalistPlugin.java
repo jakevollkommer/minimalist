@@ -437,10 +437,20 @@ public class MinimalistPlugin extends Plugin
 	/**
 	 * Ground, wall, and decorative objects have no individual removal API, and clearing
 	 * them off the tile does not un-draw them. Removing the whole tile does, but also
-	 * deletes the floor — so capture the floor and put it back.
+	 * deletes the floor — so capture the floor and put it back. Removal is skipped
+	 * entirely when anything functional shares the tile (e.g. the passable Barrier on
+	 * the guide tiles), because removeTile would take it too.
 	 */
-	private static void removeTilePreservingFloor(Scene scene, Tile tile)
+	private void removeTilePreservingFloor(Scene scene, Tile tile)
 	{
+		boolean tileHasKeptGameObject = Arrays.stream(tile.getGameObjects())
+			.filter(Objects::nonNull)
+			.anyMatch(gameObject -> !isHiddenObject(gameObject));
+		if (tileHasKeptGameObject)
+		{
+			return;
+		}
+
 		SceneTilePaint floorPaint = tile.getSceneTilePaint();
 		SceneTileModel floorModel = tile.getSceneTileModel();
 
