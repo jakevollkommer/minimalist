@@ -119,19 +119,25 @@ public interface MinimalistConfig extends Config
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrHudPortalTimer", name = "Hide HUD portal timer", description = "The 'time since last portal' HUD text", section = gotrSection, position = 13)
+	@ConfigItem(keyName = "gotrProjectiles", name = "Hide projectiles", description = "Projectiles from abyssal creatures attacking the barriers and guardian", section = gotrSection, position = 13)
+	default boolean gotrProjectiles()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "gotrHudPortalTimer", name = "Hide HUD portal timer", description = "The 'time since last portal' HUD text", section = gotrSection, position = 14)
 	default boolean gotrHudPortalTimer()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrHudGuardianCounter", name = "Hide HUD guardian counter", description = "The guardian count on the HUD", section = gotrSection, position = 14)
+	@ConfigItem(keyName = "gotrHudGuardianCounter", name = "Hide HUD guardian counter", description = "The guardian count on the HUD", section = gotrSection, position = 15)
 	default boolean gotrHudGuardianCounter()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrHudPortalLocation", name = "Hide HUD portal location", description = "The portal location text on the HUD", section = gotrSection, position = 15)
+	@ConfigItem(keyName = "gotrHudPortalLocation", name = "Hide HUD portal location", description = "The portal location text on the HUD", section = gotrSection, position = 16)
 	default boolean gotrHudPortalLocation()
 	{
 		return false;

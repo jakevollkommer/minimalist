@@ -140,7 +140,7 @@ final class GuardiansOfTheRift
 	 */
 	static final Set<Integer> ARENA_GENERIC_SCENERY_OBJECTS = Set.of(85, 738, 2735, 2738, 7389);
 
-	/** The map regions of the twelve runecrafting altar rooms. */
+	/** The map regions of the twelve runecrafting altar rooms, plus their scene neighbors. */
 	static final Set<Integer> ALTAR_REGIONS = Set.of(
 		11339, // air
 		11083, // mind
@@ -148,11 +148,11 @@ final class GuardiansOfTheRift
 		10571, // earth
 		10315, // fire
 		10059, // body
-		8523,  // cosmic
+		8523, 8522, 8266, 8267, // cosmic + neighbors
 		9035,  // chaos
 		9547,  // nature
 		9803,  // law
-		8779,  // death
+		8779, 8778, // death + neighbor
 		12875  // blood
 	);
 
@@ -168,8 +168,10 @@ final class GuardiansOfTheRift
 		701, // Curved bone
 		731, 732, // unnamed
 		736, // Animal skull
+		982, 984, 985, 986, // unnamed
 		1448, 1449, 1450, 1451, 1502, 1503, // unnamed
 		1688, 1689, 1690, // unnamed wall decor
+		16318, // unnamed
 		11941, 11942, // Column
 		11944, // Stalagmites
 		34780, 34781, 34782, // Pillar

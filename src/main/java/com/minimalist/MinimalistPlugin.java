@@ -39,6 +39,7 @@ import net.runelite.api.DynamicObject;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
+import net.runelite.api.Projectile;
 import net.runelite.api.Renderable;
 import net.runelite.api.Scene;
 import net.runelite.api.SceneTileModel;
@@ -75,6 +76,8 @@ public class MinimalistPlugin extends Plugin
 	private volatile Set<Integer> hiddenNpcIds = Set.of();
 	private volatile Set<Integer> hiddenWidgetComponents = Set.of();
 	private volatile boolean hideInactiveStatues;
+	private volatile boolean hideProjectiles;
+	private volatile boolean sceneIsGotr;
 	private boolean hideAltarScenery;
 	private boolean hideArenaGenericScenery;
 
@@ -172,6 +175,12 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
+		if (event.getGameState() == GameState.LOADING)
+		{
+			diagStatues.clear();
+			return;
+		}
+
 		// safety net: after every scene load sweep the fresh scene for anything the
 		// spawn events missed
 		if (event.getGameState() == GameState.LOGGED_IN)
@@ -183,6 +192,11 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onGameObjectSpawned(GameObjectSpawned event)
 	{
+		if (GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(event.getGameObject().getId()))
+		{
+			diagStatues.add(event.getGameObject());
+		}
+
 		hideIfCurated(event.getGameObject(), event.getTile());
 	}
 
@@ -219,6 +233,11 @@ public class MinimalistPlugin extends Plugin
 			return !hiddenNpcIds.contains(((NPC) renderable).getId());
 		}
 
+		if (renderable instanceof Projectile)
+		{
+			return !(hideProjectiles && sceneIsGotr);
+		}
+
 		if (renderable instanceof DynamicObject)
 		{
 			return shouldDrawDynamicObject((DynamicObject) renderable);
@@ -234,12 +253,21 @@ public class MinimalistPlugin extends Plugin
 	 */
 	private boolean shouldDrawDynamicObject(DynamicObject dynamicObject)
 	{
+		diagDynamicDraws.incrementAndGet();
 		if (!hideInactiveStatues)
 		{
 			return true;
 		}
 
 		Animation animation = dynamicObject.getAnimation();
+		boolean isStatueAnimation = animation != null
+			&& (animation.getId() == GuardiansOfTheRift.INACTIVE_GUARDIAN_ANIMATION
+				|| animation.getId() == GuardiansOfTheRift.ACTIVE_GUARDIAN_ANIMATION);
+		if (isStatueAnimation)
+		{
+			diagStatueAnimDraws.incrementAndGet();
+		}
+
 		boolean isInactiveStatue = animation != null
 			&& animation.getId() == GuardiansOfTheRift.INACTIVE_GUARDIAN_ANIMATION;
 		return !isInactiveStatue;
@@ -338,8 +366,9 @@ public class MinimalistPlugin extends Plugin
 			return;
 		}
 
-		diagSceneIsGotr = Arrays.stream(worldView.getScene().getMapRegions())
-			.anyMatch(regionId -> regionId == 14484);
+		sceneIsGotr = Arrays.stream(worldView.getScene().getMapRegions())
+			.anyMatch(regionId -> regionId == GuardiansOfTheRift.ARENA_REGION);
+		diagSceneIsGotr = sceneIsGotr;
 
 		Arrays.stream(worldView.getScene().getTiles())
 			.flatMap(Arrays::stream)
@@ -373,6 +402,7 @@ public class MinimalistPlugin extends Plugin
 	private void rebuildHiddenSets()
 	{
 		hideInactiveStatues = config.gotrGuardianStatues();
+		hideProjectiles = config.gotrProjectiles();
 		hideAltarScenery = config.gotrAltarScenery();
 		hideArenaGenericScenery = config.gotrAbyssScenery();
 		hiddenObjectIds = union(
@@ -413,6 +443,35 @@ public class MinimalistPlugin extends Plugin
 	// scene is loaded (arena + mines), logged once per rescan; remove before hub submission
 	private final Map<Integer, String> diagUncuratedById = new HashMap<>();
 	private boolean diagSceneIsGotr;
+
+	// TODO temporary diagnostics: statue draw-callback coverage; remove before hub submission
+	private final java.util.concurrent.atomic.AtomicInteger diagDynamicDraws = new java.util.concurrent.atomic.AtomicInteger();
+	private final java.util.concurrent.atomic.AtomicInteger diagStatueAnimDraws = new java.util.concurrent.atomic.AtomicInteger();
+	private final Set<GameObject> diagStatues = new java.util.HashSet<>();
+	private int diagTickCounter;
+
+	@Subscribe
+	public void onGameTick(net.runelite.api.events.GameTick event)
+	{
+		if (++diagTickCounter % 10 != 0 || diagStatues.isEmpty())
+		{
+			return;
+		}
+
+		String statueStates = diagStatues.stream()
+			.map(statue ->
+			{
+				Renderable renderable = statue.getRenderable();
+				Animation animation = renderable instanceof DynamicObject
+					? ((DynamicObject) renderable).getAnimation() : null;
+				String renderableType = renderable == null ? "null" : renderable.getClass().getSimpleName();
+				return statue.getId() + "=" + (animation == null ? "noAnim/" + renderableType : animation.getId());
+			})
+			.sorted()
+			.collect(Collectors.joining(", "));
+		log.info("[minimalist-diag] statues [{}] | drawCallback last10ticks: dynamicObjects={} statueAnims={}",
+			statueStates, diagDynamicDraws.getAndSet(0), diagStatueAnimDraws.getAndSet(0));
+	}
 
 	private void recordIfUncuratedGotrObject(TileObject tileObject)
 	{
