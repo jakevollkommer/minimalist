@@ -175,7 +175,7 @@ final class GuardiansOfTheRift
 	 * Decorative NPCs inside the altar rooms (the death altar ghosts). Generic world
 	 * IDs, so only hidden while inside {@link #ALTAR_REGIONS}.
 	 */
-	static final Set<Integer> ALTAR_NPCS = Set.of(91); // Ghost
+	static final Set<Integer> ALTAR_NPCS = Set.of(88, 89, 90, 91); // Ghost
 
 	/** The map regions of the twelve runecrafting altar rooms, plus their scene neighbors. */
 	static final Set<Integer> ALTAR_REGIONS = Set.of(
@@ -208,6 +208,7 @@ final class GuardiansOfTheRift
 		119, // Party Balloon
 		169, // unnamed
 		724, // Standing torch
+		662, // Corpse
 		982, 984, 985, 986, // unnamed
 		1166, // Mushrooms
 		1176, 1177, // Waterlily
@@ -218,7 +219,7 @@ final class GuardiansOfTheRift
 		1246, 1247, // unnamed
 		1276, 1282, 1286, 1289, 1384, // Tree, Dead tree (choppable, but only ever inside altars)
 		1385, // unnamed
-		1386, 1388, // Roots
+		1386, 1388, 1389, // Roots
 		1391, // Plant
 		1417, 1484, // unnamed
 		1448, 1449, 1450, 1451, 1502, 1503, // unnamed
