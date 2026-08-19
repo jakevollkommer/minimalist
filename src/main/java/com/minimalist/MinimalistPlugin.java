@@ -169,20 +169,14 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		return true;
 	}
 
-	// TODO temporary diagnostics; remove before hub submission
-	private final java.util.concurrent.atomic.AtomicInteger diagGlowLogCount = new java.util.concurrent.atomic.AtomicInteger();
+	// TODO temporary diagnostics: every object drawn (not hidden) while an altar scene
+	// is loaded; remove before hub submission
+	private final Set<Integer> diagDrawnAtAltar = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
 	@Override
 	public boolean drawObject(Scene scene, TileObject object)
 	{
 		int objectId = object.getId();
-
-		// TODO temporary diagnostics; remove before hub submission
-		if (objectId == 34791 && diagGlowLogCount.getAndIncrement() < 5)
-		{
-			log.info("[minimalist-diag] drawObject 34791: hideAltarScenery={} sceneRegions={} verdictHidden={}",
-				hideAltarScenery, Arrays.toString(scene.getMapRegions()), isHiddenAltarScenery(scene, objectId));
-		}
 		if (hiddenObjectIds.contains(objectId))
 		{
 			return false;
@@ -195,7 +189,15 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			return !isHiddenStatue(objectId);
 		}
 
-		return !isHiddenAltarScenery(scene, objectId) && !isHiddenArenaGenericScenery(scene, objectId);
+		boolean hidden = isHiddenAltarScenery(scene, objectId) || isHiddenArenaGenericScenery(scene, objectId);
+
+		// TODO temporary diagnostics; remove before hub submission
+		if (!hidden && Altars.hasAltarInScene(scene))
+		{
+			diagDrawnAtAltar.add(objectId);
+		}
+
+		return !hidden;
 	}
 
 	private boolean isHiddenNpc(NPC npc)
@@ -347,6 +349,12 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		// remove before hub submission
 		log.info("[minimalist-diag] scene regions={} gotr={} altar={} altarNpcs={}",
 			Arrays.toString(scene.getMapRegions()), sceneIsGotr, sceneHasAltar, currentAltarHiddenNpcIds);
+		if (!diagDrawnAtAltar.isEmpty())
+		{
+			log.info("[minimalist-diag] drawn (not hidden) at last altar scene: {}",
+				new java.util.TreeSet<>(diagDrawnAtAltar));
+			diagDrawnAtAltar.clear();
+		}
 	}
 
 	/** Entity hiding applies at GOTR and inside the runecrafting altars reached from it. */
