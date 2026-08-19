@@ -435,21 +435,27 @@ public class MinimalistPlugin extends Plugin
 	// TODO temporary diagnostics; remove before hub submission
 	private final Map<String, Integer> diagRemovedById = new HashMap<>();
 
-	// TODO temporary diagnostics: varbit sniffing to find the active-altar varbits;
-	// remove before hub submission
+	// TODO temporary diagnostics: the GOTR HUD update script carries the game state;
+	// log its argument vector on change to locate the active-altar args. Remove before
+	// hub submission.
+	private String diagPreviousScriptArgs = "";
+
 	@Subscribe
-	public void onVarbitChanged(net.runelite.api.events.VarbitChanged event)
+	public void onScriptPreFired(net.runelite.api.events.ScriptPreFired event)
 	{
-		boolean isPlausibleAltarVarbit = sceneIsGotr
-			&& event.getVarbitId() != -1
-			&& event.getValue() >= 0 && event.getValue() <= 15;
-		if (!isPlausibleAltarVarbit)
+		if (event.getScriptId() != 5980)
 		{
 			return;
 		}
 
-		log.info("[minimalist-varbit] tick={} varbit={} value={}",
-			client.getTickCount(), event.getVarbitId(), event.getValue());
+		String arguments = Arrays.toString(event.getScriptEvent().getArguments());
+		if (arguments.equals(diagPreviousScriptArgs))
+		{
+			return;
+		}
+
+		diagPreviousScriptArgs = arguments;
+		log.info("[minimalist-script] tick={} args={}", client.getTickCount(), arguments);
 	}
 
 	/**
