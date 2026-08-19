@@ -233,7 +233,7 @@ public class MinimalistPlugin extends Plugin
 	 * two active guardians are clickable. Checked on demand while the menu is built.
 	 */
 	@Subscribe
-	public void onPostMenuSort(net.runelite.client.events.PostMenuSort event)
+	public void onPostMenuSort(net.runelite.api.events.PostMenuSort event)
 	{
 		if (!hideInactiveStatues || !sceneIsGotr)
 		{
