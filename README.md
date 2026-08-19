@@ -32,6 +32,10 @@ so hidden objects stay hoverable, clickable, and visible to other plugins.
 
 ## How it works
 
+- **A GPU renderer is required for scenery hiding** — the GPU plugin (default), GPU with
+  region locker, or 117HD all work; the software renderer never consults the render
+  callback, so scenery cannot be hidden on it (the plugin tells you in chat if this
+  applies). NPC, player, projectile, statue, and HUD hiding work on any renderer.
 - All hiding goes through RuneLite's `RenderCallback`: static scenery is filtered when the
   scene uploads (toggle changes apply with one quick reload), and animated objects — the
   guardian statues — are filtered per frame, so active/inactive changes show instantly.
