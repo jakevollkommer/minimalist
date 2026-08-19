@@ -193,4 +193,16 @@ public interface MinimalistConfig extends Config
 	{
 		return "github.com/jakevollkommer/osrs-minimalist/issues";
 	}
+
+	@ConfigItem(
+		keyName = "supportLink",
+		name = "Buy me a coffee",
+		description = "Enjoying Minimalist? Support development at this link",
+		section = feedbackSection,
+		position = 2
+	)
+	default String supportLink()
+	{
+		return "ko-fi.com/jakevollkommer";
+	}
 }
