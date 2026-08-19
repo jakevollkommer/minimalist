@@ -35,35 +35,46 @@ final class GuardiansOfTheRift
 {
 	/**
 	 * The abyss backdrop around the arena: Whale-fall, Elk kelp, Dark lace, statues,
-	 * the Abyssal Rift decoration, and unnamed decorative models.
+	 * the Abyssal Rift decoration, and unnamed decorative models (fossils, growths).
+	 * All unnamed entries verified against the cache to have no menu actions and no
+	 * varbit transforms.
 	 */
 	static final Set<Integer> ABYSS_SCENERY_OBJECTS = Set.of(
+		43500, 43501, 43502, 43505, 43506, 43507, 43520, 43531,
 		43521, 43522, 43523, 43524, 43525, 43526, 43527, 43528, 43529, 43530,
-		43604, 43605, 43607, 43608, 43609, 43610, 43611,
+		43600, 43601, 43602, 43603, 43604, 43605, 43606, 43607, 43608, 43609, 43610, 43611,
+		43612, 43613, 43614, 43615,
 		43616, 43617, 43618, 43619, 43620, 43621, 43622, 43623, 43624, 43625,
+		43626, 43627, 43628, 43630, 43631,
 		43629, // Whale-fall
 		43632, 43633, 43634, // Elk kelp
 		43635, 43636, 43637, // Dark lace
 		43638, 43639, 43640, 43641, 43642, // Elk kelp
+		43643,
 		43644, 43645, 43646, // Dark lace
 		43647, 43648, 43649, 43650, 43651, 43652, // Elk kelp
 		43653, 43654, 43655, // Dark lace
 		43656, 43657, 43658, // Elk kelp
-		43660, 43661, 43662, 43663, 43664, 43665, 43667, 43668, 43669, 43671, 43672,
+		43659, 43660, 43661, 43662, 43663, 43664, 43665, 43666, 43667, 43668, 43669,
+		43670, 43671, 43672, 43673, 43674,
 		43675, // Pineapple
 		43676, // Head
 		43677, // Rock
-		43684, 43685, 43686, 43687,
+		43678, 43679, 43680, 43681, 43682, 43683, 43684, 43685, 43686, 43687, 43688,
+		43690, 43691, 43694,
 		43698, 43699, // Statue
 		43713, // Abyssal Rift
-		43826, 43828
+		43823, 43826, 43828, 43829, 43830, 43831, 43832, 43833, 43834, 43835, 43836,
+		43837, 43839, 43850
 	);
 
 	/**
-	 * The twelve inactive "Guardian of ..." statues ringing the arena (Air through Law).
+	 * The twelve INACTIVE "Guardian of ..." statues ringing the arena (Air through Law).
+	 * These have no menu actions; the active guardians (43701-43712, with Enter and
+	 * Toggle-talisman actions) spawn as separate objects and are never hidden.
 	 */
 	static final Set<Integer> GUARDIAN_STATUE_OBJECTS = Set.of(
-		43701, 43702, 43703, 43704, 43705, 43706, 43707, 43708, 43709, 43710, 43711, 43712
+		43809, 43810, 43811, 43812, 43813, 43814, 43815, 43816, 43817, 43818, 43819, 43820
 	);
 
 	/**
@@ -92,14 +103,14 @@ final class GuardiansOfTheRift
 
 	/**
 	 * Lobby and entrance decoration: Skeleton, Pillars, Ruined Pillars, Rubble, Cart, Fountain.
+	 * Deliberately excludes Rubble 43724/43726 — those have a Climb option (agility shortcut).
 	 */
 	static final Set<Integer> ENTRANCE_SCENERY_OBJECTS = Set.of(
 		43508, // Skeleton
 		43509, 43510, 43511, 43512, 43513, 43514, 43515, 43516, // Pillars
-		43517, 43518, 43519, // Rubble
+		43517, 43518, 43519, // Rubble (decorative only)
 		43535, // Cart
-		43689, // Fountain
-		43724, 43726 // Rubble
+		43689 // Fountain
 	);
 
 	/** The rain effect objects inside the temple. */
@@ -123,6 +134,14 @@ final class GuardiansOfTheRift
 
 	/** Rick. */
 	static final Set<Integer> RICK_NPCS = Set.of(11409, 11410);
+
+	/**
+	 * The invisible NPCs that hold the barriers' hitpoints (2- and 3-tile-wide variants).
+	 * Hiding these also hides the hitsplats and health bars drawn on the barriers.
+	 */
+	static final Set<Integer> BARRIER_NPCS = Set.of(
+		11418, 11419, 11420, 11421, 11422, 11423, 11424, 11425
+	);
 
 	/** HUD: time since last portal. */
 	static final int HUD_PORTAL_TIMER = WidgetUtil.packComponentId(746, 5);

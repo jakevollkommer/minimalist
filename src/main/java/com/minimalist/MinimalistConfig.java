@@ -35,22 +35,9 @@ public interface MinimalistConfig extends Config
 	String GROUP = "minimalist";
 
 	@ConfigSection(
-		name = "General",
-		description = "Hiding that applies everywhere",
-		position = 0
-	)
-	String generalSection = "generalSection";
-
-	@ConfigItem(keyName = "hideThralls", name = "Hide thralls", description = "Hide summoned thralls (ghostly, skeletal, zombified)", section = generalSection, position = 0)
-	default boolean hideThralls()
-	{
-		return true;
-	}
-
-	@ConfigSection(
 		name = "Guardians of the Rift",
 		description = "Hide non-interactable scenery at Guardians of the Rift",
-		position = 1
+		position = 0
 	)
 	String gotrSection = "gotrSection";
 
@@ -78,7 +65,7 @@ public interface MinimalistConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrBarriersAndCells", name = "Hide barriers and cells", description = "Barriers, the weak cells table, and the elemental/catalytic guides", section = gotrSection, position = 4)
+	@ConfigItem(keyName = "gotrBarriersAndCells", name = "Hide barriers and cells", description = "Barriers (including their hitsplats), the weak cells table, and the elemental/catalytic guides", section = gotrSection, position = 4)
 	default boolean gotrBarriersAndCells()
 	{
 		return true;

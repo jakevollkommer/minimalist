@@ -34,10 +34,9 @@ import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import net.runelite.api.GroundObject;
 import net.runelite.api.NPC;
-import net.runelite.api.ObjectComposition;
 import net.runelite.api.Renderable;
-import net.runelite.api.Scene;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
 import net.runelite.api.WorldView;
@@ -201,18 +200,9 @@ public class MinimalistPlugin extends Plugin
 
 	private boolean isCuratedObject(TileObject spawnedObject)
 	{
-		if (hiddenObjectIds.contains(spawnedObject.getId()))
-		{
-			return true;
-		}
-
-		int[] impostorIds = client.getObjectDefinition(spawnedObject.getId()).getImpostorIds();
-		if (impostorIds == null)
-		{
-			return false;
-		}
-
-		return Arrays.stream(impostorIds).anyMatch(hiddenObjectIds::contains);
+		// exact spawned-id matching only: curated sets deliberately exclude multiloc
+		// bases, so transformed states are never hidden by accident
+		return hiddenObjectIds.contains(spawnedObject.getId());
 	}
 
 	private void removeFromScene(TileObject hiddenObject, Tile tile)
@@ -223,16 +213,22 @@ public class MinimalistPlugin extends Plugin
 			return;
 		}
 
-		Scene scene = worldView.getScene();
 		if (hiddenObject instanceof GameObject)
 		{
-			scene.removeGameObject((GameObject) hiddenObject);
+			worldView.getScene().removeGameObject((GameObject) hiddenObject);
 			return;
 		}
 
-		// Wall, decorative and ground objects have no individual removal API;
-		// removing the tile takes everything on it with it.
-		scene.removeTile(tile);
+		if (hiddenObject instanceof GroundObject)
+		{
+			// removing just the ground object keeps the tile's floor intact
+			tile.setGroundObject(null);
+			return;
+		}
+
+		// Wall and decorative objects have no individual removal API; removing the
+		// tile takes everything on it with it, including the floor.
+		worldView.getScene().removeTile(tile);
 	}
 
 	private void setWidgetHidden(int componentId, boolean hidden)
@@ -299,11 +295,11 @@ public class MinimalistPlugin extends Plugin
 			toggled(config.gotrRain(), GuardiansOfTheRift.RAIN_OBJECTS));
 
 		hiddenNpcIds = union(
-			toggled(config.hideThralls(), GeneralContent.THRALL_NPCS),
 			toggled(config.gotrAbyssalCreatures(), GuardiansOfTheRift.ABYSSAL_CREATURE_NPCS),
 			toggled(config.gotrSummonedGuardians(), GuardiansOfTheRift.SUMMONED_GUARDIAN_NPCS),
 			toggled(config.gotrApprentices(), GuardiansOfTheRift.APPRENTICE_NPCS),
-			toggled(config.gotrRick(), GuardiansOfTheRift.RICK_NPCS));
+			toggled(config.gotrRick(), GuardiansOfTheRift.RICK_NPCS),
+			toggled(config.gotrBarriersAndCells(), GuardiansOfTheRift.BARRIER_NPCS));
 
 		hiddenWidgetComponents = union(
 			toggled(config.gotrHudPortalTimer(), Set.of(GuardiansOfTheRift.HUD_PORTAL_TIMER)),
