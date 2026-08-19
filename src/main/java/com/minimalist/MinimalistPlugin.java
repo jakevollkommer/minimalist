@@ -69,6 +69,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 	description = "Hide non-interactable scenery objects, NPCs, and HUD elements at supported content",
 	tags = {"hide", "hider", "scenery", "declutter", "minimal", "gotr", "guardians", "rift"}
 )
+@lombok.extern.slf4j.Slf4j
 public class MinimalistPlugin extends Plugin implements RenderCallback
 {
 	// Draw suppression happens through RenderCallback: static scenery is filtered when
@@ -320,6 +321,11 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		Scene scene = worldView.getScene();
 		sceneIsGotr = sceneContainsRegion(scene, GotrArena.ARENA_REGION);
 		currentAltarHiddenNpcIds = Altars.hiddenNpcsForScene(scene);
+
+		// TODO temporary diagnostics to capture each altar's true scene regions;
+		// remove before hub submission
+		log.info("[minimalist-diag] scene regions={} altarNpcs={}",
+			Arrays.toString(scene.getMapRegions()), currentAltarHiddenNpcIds);
 	}
 
 	// --- widgets ---
