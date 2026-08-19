@@ -169,12 +169,25 @@ public interface MinimalistConfig extends Config
 	String feedbackSection = "feedbackSection";
 
 	@ConfigItem(
-		keyName = "suggestionsLink",
-		name = "Suggest content",
-		description = "Only Guardians of the Rift is covered so far, but more minigames and areas are planned."
-			+ "<br>Want yours next, or found something that should be hidden? Open a GitHub issue at this link",
+		keyName = "scopeNote",
+		name = "About",
+		description = "What Minimalist covers today and where it is going",
 		section = feedbackSection,
 		position = 0
+	)
+	default String scopeNote()
+	{
+		return "Minimalist currently supports Guardians of the Rift only. "
+			+ "The intention is to bring minimalism to other areas of the game over time - "
+			+ "feature requests are encouraged!";
+	}
+
+	@ConfigItem(
+		keyName = "suggestionsLink",
+		name = "Suggest content",
+		description = "Want another minigame or area covered, or found something that should be hidden? Open a GitHub issue at this link",
+		section = feedbackSection,
+		position = 1
 	)
 	default String suggestionsLink()
 	{

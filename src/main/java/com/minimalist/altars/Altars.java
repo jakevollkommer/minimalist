@@ -67,49 +67,68 @@ public final class Altars
 	}
 
 	/**
-	 * The altar the loaded scene belongs to, or null when the scene is not an altar.
-	 * Resolves from the Scene itself so it is correct even during scene upload. Base
-	 * regions are checked before neighbor regions so adjacent altars never shadow
-	 * each other.
+	 * True when this object is altar decoration to hide in the loaded scene. Adjacent
+	 * altars often share a scene (their regions neighbor each other), so EVERY altar
+	 * present in the scene contributes its distinctive scenery — never just the first
+	 * match. Resolves from the Scene itself so it is correct even during scene upload,
+	 * and allocates nothing (it runs per object).
 	 */
-	@Nullable
-	public static AltarRoom forScene(Scene scene)
+	public static boolean isAltarSceneryInScene(Scene scene, int objectId)
 	{
 		int[] sceneRegions = scene.getMapRegions();
 		if (sceneRegions == null)
 		{
-			return null;
+			return false;
 		}
 
+		boolean sceneHasAnyAltar = false;
 		for (int regionId : sceneRegions)
 		{
-			AltarRoom altar = ALTAR_BY_BASE_REGION.get(regionId);
-			if (altar != null)
+			AltarRoom altar = altarForRegion(regionId);
+			if (altar == null)
 			{
-				return altar;
+				continue;
+			}
+
+			sceneHasAnyAltar = true;
+			if (altar.distinctiveScenery().contains(objectId))
+			{
+				return true;
 			}
 		}
 
-		for (int regionId : sceneRegions)
-		{
-			AltarRoom altar = ALTAR_BY_NEIGHBOR_REGION.get(regionId);
-			if (altar != null)
-			{
-				return altar;
-			}
-		}
-
-		return null;
+		return sceneHasAnyAltar && SharedAltarScenery.OBJECTS.contains(objectId);
 	}
 
 	/**
-	 * True when this object is decoration to hide inside the given altar: either
-	 * decoration shared by all altars, or this altar's own.
+	 * The decorative NPC ids of every altar the loaded scene spans. Called once per
+	 * scene load, so the allocation is fine.
 	 */
-	public static boolean isAltarScenery(AltarRoom altar, int objectId)
+	public static Set<Integer> hiddenNpcsForScene(Scene scene)
 	{
-		return SharedAltarScenery.OBJECTS.contains(objectId)
-			|| altar.distinctiveScenery().contains(objectId);
+		int[] sceneRegions = scene.getMapRegions();
+		if (sceneRegions == null)
+		{
+			return Set.of();
+		}
+
+		return java.util.Arrays.stream(sceneRegions)
+			.mapToObj(Altars::altarForRegion)
+			.filter(java.util.Objects::nonNull)
+			.flatMap(altar -> altar.hiddenNpcs().stream())
+			.collect(Collectors.toUnmodifiableSet());
+	}
+
+	@Nullable
+	private static AltarRoom altarForRegion(int regionId)
+	{
+		AltarRoom baseOwner = ALTAR_BY_BASE_REGION.get(regionId);
+		if (baseOwner != null)
+		{
+			return baseOwner;
+		}
+
+		return ALTAR_BY_NEIGHBOR_REGION.get(regionId);
 	}
 
 	private Altars()

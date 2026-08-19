@@ -25,7 +25,6 @@
 package com.minimalist;
 
 import com.google.inject.Provides;
-import com.minimalist.altars.AltarRoom;
 import com.minimalist.altars.Altars;
 import com.minimalist.gotr.GotrArena;
 import com.minimalist.gotr.GotrHud;
@@ -36,7 +35,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -92,8 +90,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	private volatile boolean hideAltarScenery;
 	private volatile boolean hideArenaGenericScenery;
 	private volatile boolean sceneIsGotr;
-	@Nullable
-	private volatile AltarRoom currentAltar;
+	private volatile Set<Integer> currentAltarHiddenNpcIds = Set.of();
 	private volatile int activeElementalStatue = -1;
 	private volatile int activeCatalyticStatue = -1;
 
@@ -201,8 +198,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			return true;
 		}
 
-		AltarRoom altar = currentAltar;
-		return hideAltarScenery && altar != null && altar.hiddenNpcs().contains(npc.getId());
+		return hideAltarScenery && currentAltarHiddenNpcIds.contains(npc.getId());
 	}
 
 	private boolean isSomeoneElsesPet(NPC npc)
@@ -231,18 +227,12 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 	/**
 	 * Altar decoration uses generic world IDs, so it is only hidden when the loaded
-	 * scene resolves to an altar. The gate reads the Scene parameter — correct even
+	 * scene spans altar regions. The gate reads the Scene parameter — correct even
 	 * during scene upload — never per-object world coordinates.
 	 */
 	private boolean isHiddenAltarScenery(Scene scene, int objectId)
 	{
-		if (!hideAltarScenery)
-		{
-			return false;
-		}
-
-		AltarRoom altar = Altars.forScene(scene);
-		return altar != null && Altars.isAltarScenery(altar, objectId);
+		return hideAltarScenery && Altars.isAltarSceneryInScene(scene, objectId);
 	}
 
 	private boolean isHiddenArenaGenericScenery(Scene scene, int objectId)
@@ -323,13 +313,13 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		if (worldView == null)
 		{
 			sceneIsGotr = false;
-			currentAltar = null;
+			currentAltarHiddenNpcIds = Set.of();
 			return;
 		}
 
 		Scene scene = worldView.getScene();
 		sceneIsGotr = sceneContainsRegion(scene, GotrArena.ARENA_REGION);
-		currentAltar = Altars.forScene(scene);
+		currentAltarHiddenNpcIds = Altars.hiddenNpcsForScene(scene);
 	}
 
 	// --- widgets ---
