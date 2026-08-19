@@ -401,6 +401,9 @@ public class MinimalistPlugin extends Plugin
 			return;
 		}
 
+		// TODO temporary diagnostics; remove before hub submission
+		diagRemovedById.merge(hiddenObject.getId() + "/" + hiddenObject.getClass().getSimpleName(), 1, Integer::sum);
+
 		Scene scene = worldView.getScene();
 		if (hiddenObject instanceof GameObject)
 		{
@@ -410,6 +413,9 @@ public class MinimalistPlugin extends Plugin
 
 		removeTilePreservingFloor(scene, tile);
 	}
+
+	// TODO temporary diagnostics; remove before hub submission
+	private final Map<String, Integer> diagRemovedById = new HashMap<>();
 
 	/**
 	 * Ground, wall, and decorative objects have no individual removal API, and clearing
@@ -585,5 +591,8 @@ public class MinimalistPlugin extends Plugin
 			Arrays.toString(client.getTopLevelWorldView().getScene().getMapRegions()),
 			new java.util.TreeMap<>(diagUncuratedById));
 		diagUncuratedById.clear();
+
+		log.info("[minimalist-diag] removed this rescan: {}", new java.util.TreeMap<>(diagRemovedById));
+		diagRemovedById.clear();
 	}
 }
