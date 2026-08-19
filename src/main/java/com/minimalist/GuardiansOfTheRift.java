@@ -69,13 +69,17 @@ final class GuardiansOfTheRift
 	);
 
 	/**
-	 * The twelve INACTIVE "Guardian of ..." statues ringing the arena (Air through Law).
-	 * These have no menu actions; the active guardians (43701-43712, with Enter and
-	 * Toggle-talisman actions) spawn as separate objects and are never hidden.
+	 * The twelve "Guardian of ..." statues ringing the arena (Air through Law). They stay
+	 * in the scene for the whole game; whether one is active is signaled purely by its
+	 * renderable playing the active animation. Hiding is therefore done per-frame through
+	 * the draw listener (inactive only), never by scene removal.
 	 */
 	static final Set<Integer> GUARDIAN_STATUE_OBJECTS = Set.of(
-		43809, 43810, 43811, 43812, 43813, 43814, 43815, 43816, 43817, 43818, 43819, 43820
+		43701, 43702, 43703, 43704, 43705, 43706, 43707, 43708, 43709, 43710, 43711, 43712
 	);
+
+	/** The animation a guardian statue plays while its altar is active. */
+	static final int ACTIVE_GUARDIAN_ANIMATION = 9363;
 
 	/**
 	 * DEPLETED guardian remains only — the mined-out husks with no menu actions.

@@ -26,12 +26,15 @@ package com.minimalist;
 
 import com.google.inject.Provides;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+import net.runelite.api.Animation;
 import net.runelite.api.Client;
+import net.runelite.api.DynamicObject;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
 import net.runelite.api.GroundObject;
@@ -42,8 +45,10 @@ import net.runelite.api.TileObject;
 import net.runelite.api.WorldView;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.DecorativeObjectSpawned;
+import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.GroundObjectSpawned;
 import net.runelite.api.events.WallObjectSpawned;
 import net.runelite.api.widgets.Widget;
@@ -63,15 +68,20 @@ import net.runelite.client.plugins.PluginDescriptor;
 @lombok.extern.slf4j.Slf4j
 public class MinimalistPlugin extends Plugin
 {
-	// TODO temporary diagnostics for statue behavior; remove before hub submission
-	private static final Set<Integer> DIAG_ACTIVE_STATUES = Set.of(
-		43701, 43702, 43703, 43704, 43705, 43706, 43707, 43708, 43709, 43710, 43711, 43712);
-
 	// written on the client thread; volatile because the renderer thread reads
-	// hiddenNpcIds through the draw listener
+	// hiddenNpcIds and hiddenStatueRenderables through the draw listener
 	private volatile Set<Integer> hiddenObjectIds = Set.of();
 	private volatile Set<Integer> hiddenNpcIds = Set.of();
 	private volatile Set<Integer> hiddenWidgetComponents = Set.of();
+	private volatile Set<Renderable> hiddenStatueRenderables = Set.of();
+	private boolean hideInactiveStatues;
+
+	/**
+	 * The guardian statues present in the scene. Statues stay for the whole game and
+	 * animate between active and inactive, so they are tracked and hidden per-frame
+	 * rather than removed.
+	 */
+	private final Set<GameObject> guardianStatues = new HashSet<>();
 
 	private final Hooks.RenderableDrawListener drawListener = this::shouldDraw;
 
@@ -117,6 +127,9 @@ public class MinimalistPlugin extends Plugin
 			hiddenObjectIds = Set.of();
 			hiddenNpcIds = Set.of();
 			hiddenWidgetComponents = Set.of();
+			hiddenStatueRenderables = Set.of();
+			hideInactiveStatues = false;
+			guardianStatues.clear();
 
 			widgetsToRestore.forEach(component -> setWidgetHidden(component, false));
 			if (objectsWereHidden && client.getGameState() == GameState.LOGGED_IN)
@@ -168,6 +181,13 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
+		if (event.getGameState() == GameState.LOADING)
+		{
+			guardianStatues.clear();
+			hiddenStatueRenderables = Set.of();
+			return;
+		}
+
 		// safety net: after every scene load (login, region change, or our own
 		// restore reload) sweep the fresh scene for anything spawn events missed
 		if (event.getGameState() == GameState.LOGGED_IN)
@@ -179,30 +199,63 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onGameObjectSpawned(GameObjectSpawned event)
 	{
-		logStatueDiagnostics("spawn", event.getGameObject());
+		trackIfGuardianStatue(event.getGameObject());
 		hideIfCurated(event.getGameObject(), event.getTile());
 	}
 
 	@Subscribe
-	public void onGameObjectDespawned(net.runelite.api.events.GameObjectDespawned event)
+	public void onGameObjectDespawned(GameObjectDespawned event)
 	{
-		logStatueDiagnostics("despawn", event.getGameObject());
+		guardianStatues.remove(event.getGameObject());
 	}
 
-	// TODO temporary diagnostics for statue behavior; remove before hub submission
-	private void logStatueDiagnostics(String eventName, GameObject gameObject)
+	private void trackIfGuardianStatue(GameObject gameObject)
 	{
-		int id = gameObject.getId();
-		boolean isActiveStatue = DIAG_ACTIVE_STATUES.contains(id);
-		boolean isInactiveStatue = GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(id);
-		if (!isActiveStatue && !isInactiveStatue)
+		if (GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(gameObject.getId()))
 		{
-			return;
+			guardianStatues.add(gameObject);
+		}
+	}
+
+	@Subscribe
+	public void onGameTick(GameTick event)
+	{
+		Set<Renderable> previouslyHidden = hiddenStatueRenderables;
+		hiddenStatueRenderables = currentlyInactiveStatueRenderables();
+
+		// TODO temporary diagnostics for statue behavior; remove before hub submission
+		if (previouslyHidden.size() != hiddenStatueRenderables.size())
+		{
+			log.info("[minimalist-diag] inactive statues hidden: {} of {} tracked",
+				hiddenStatueRenderables.size(), guardianStatues.size());
+		}
+	}
+
+	private Set<Renderable> currentlyInactiveStatueRenderables()
+	{
+		if (!hideInactiveStatues || guardianStatues.isEmpty())
+		{
+			return Set.of();
 		}
 
-		log.info("[minimalist-diag] statue {} id={} ({}) at {} - hide decision: {}",
-			eventName, id, isActiveStatue ? "ACTIVE" : "INACTIVE",
-			gameObject.getWorldLocation(), isCuratedObject(gameObject));
+		return guardianStatues.stream()
+			.filter(MinimalistPlugin::isInactiveStatue)
+			.map(GameObject::getRenderable)
+			.filter(Objects::nonNull)
+			.collect(Collectors.toUnmodifiableSet());
+	}
+
+	private static boolean isInactiveStatue(GameObject statue)
+	{
+		Renderable renderable = statue.getRenderable();
+		if (!(renderable instanceof DynamicObject))
+		{
+			return false;
+		}
+
+		Animation animation = ((DynamicObject) renderable).getAnimation();
+		boolean isActive = animation != null && animation.getId() == GuardiansOfTheRift.ACTIVE_GUARDIAN_ANIMATION;
+		return !isActive;
 	}
 
 	@Subscribe
@@ -233,12 +286,12 @@ public class MinimalistPlugin extends Plugin
 
 	private boolean shouldDraw(Renderable renderable, boolean drawingUi)
 	{
-		if (!(renderable instanceof NPC))
+		if (renderable instanceof NPC)
 		{
-			return true;
+			return !hiddenNpcIds.contains(((NPC) renderable).getId());
 		}
 
-		return !hiddenNpcIds.contains(((NPC) renderable).getId());
+		return !hiddenStatueRenderables.contains(renderable);
 	}
 
 	private void hideIfCurated(TileObject spawnedObject, Tile tile)
@@ -298,7 +351,7 @@ public class MinimalistPlugin extends Plugin
 
 	private void rescanSceneIfLoggedIn()
 	{
-		if (client.getGameState() != GameState.LOGGED_IN || hiddenObjectIds.isEmpty())
+		if (client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
 		}
@@ -325,7 +378,11 @@ public class MinimalistPlugin extends Plugin
 		Arrays.stream(tile.getGameObjects())
 			.filter(Objects::nonNull)
 			.filter(gameObject -> isPrimaryTile(gameObject, tile))
-			.forEach(gameObject -> hideIfCurated(gameObject, tile));
+			.forEach(gameObject ->
+			{
+				trackIfGuardianStatue(gameObject);
+				hideIfCurated(gameObject, tile);
+			});
 	}
 
 	/**
@@ -338,9 +395,9 @@ public class MinimalistPlugin extends Plugin
 
 	private void rebuildHiddenSets()
 	{
+		hideInactiveStatues = config.gotrGuardianStatues();
 		hiddenObjectIds = union(
 			toggled(config.gotrAbyssScenery(), GuardiansOfTheRift.ABYSS_SCENERY_OBJECTS),
-			toggled(config.gotrGuardianStatues(), GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS),
 			toggled(config.gotrGuardianRemains(), GuardiansOfTheRift.GUARDIAN_REMAINS_OBJECTS),
 			toggled(config.gotrEssencePiles(), GuardiansOfTheRift.ESSENCE_PILE_OBJECTS),
 			toggled(config.gotrBarriersAndCells(), GuardiansOfTheRift.BARRIER_AND_CELL_OBJECTS),
