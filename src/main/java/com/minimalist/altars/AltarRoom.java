@@ -35,7 +35,12 @@ public interface AltarRoom
 {
 	String altarName();
 
-	/** The room's map region; the scene it loads in may also span neighboring regions. */
+	/**
+	 * The room's map region; the scene it loads in may also span neighboring regions.
+	 * Note: the altar-name-to-region assignments are best-effort documentation — hiding
+	 * matches the union of all altar decoration whenever any altar scene is loaded, so
+	 * a mislabeled region cannot affect behavior.
+	 */
 	int baseRegion();
 
 	/** Scenery observed only at this altar. Shared decoration lives in {@link SharedAltarScenery}. */
