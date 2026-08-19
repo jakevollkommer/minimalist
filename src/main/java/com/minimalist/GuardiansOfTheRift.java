@@ -78,14 +78,12 @@ final class GuardiansOfTheRift
 	);
 
 	/**
-	 * Mineable guardian debris: Guardian parts, Guardian remains (all sizes), Fallen guardian.
+	 * DEPLETED guardian remains only — the mined-out husks with no menu actions.
+	 * Mineable remains (43715-43721, all with a Mine action) are never hidden.
 	 */
 	static final Set<Integer> GUARDIAN_REMAINS_OBJECTS = Set.of(
-		43715, 43716, // Guardian parts
-		43717, 43718, // Guardian remains
-		43719, // Large guardian remains
-		43720, // Huge guardian remains
-		43721  // Fallen guardian
+		43796, 43797, 43798, 43799, 43800, 43801, 43804, 43805, // Guardian remains (depleted)
+		43803 // Rubble (depleted fallen guardian)
 	);
 
 	/** Essence pile (elemental) and Essence pile (catalytic). */

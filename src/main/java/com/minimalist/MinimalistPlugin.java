@@ -43,6 +43,7 @@ import net.runelite.api.WorldView;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.DecorativeObjectSpawned;
 import net.runelite.api.events.GameObjectSpawned;
+import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GroundObjectSpawned;
 import net.runelite.api.events.WallObjectSpawned;
 import net.runelite.api.widgets.Widget;
@@ -61,9 +62,11 @@ import net.runelite.client.plugins.PluginDescriptor;
 )
 public class MinimalistPlugin extends Plugin
 {
-	private Set<Integer> hiddenObjectIds = Set.of();
-	private Set<Integer> hiddenNpcIds = Set.of();
-	private Set<Integer> hiddenWidgetComponents = Set.of();
+	// written on the client thread; volatile because the renderer thread reads
+	// hiddenNpcIds through the draw listener
+	private volatile Set<Integer> hiddenObjectIds = Set.of();
+	private volatile Set<Integer> hiddenNpcIds = Set.of();
+	private volatile Set<Integer> hiddenWidgetComponents = Set.of();
 
 	private final Hooks.RenderableDrawListener drawListener = this::shouldDraw;
 
@@ -88,23 +91,34 @@ public class MinimalistPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		rebuildHiddenSets();
 		hooks.registerRenderableDrawListener(drawListener);
-		clientThread.invokeLater(this::rescanSceneIfLoggedIn);
+		// all set mutation happens on the client thread so spawn events, rescans,
+		// and the draw listener always agree on the current sets
+		clientThread.invokeLater(() ->
+		{
+			rebuildHiddenSets();
+			rescanSceneIfLoggedIn();
+		});
 	}
 
 	@Override
 	protected void shutDown()
 	{
 		hooks.unregisterRenderableDrawListener(drawListener);
+		clientThread.invokeLater(() ->
+		{
+			Set<Integer> widgetsToRestore = hiddenWidgetComponents;
+			boolean objectsWereHidden = !hiddenObjectIds.isEmpty();
+			hiddenObjectIds = Set.of();
+			hiddenNpcIds = Set.of();
+			hiddenWidgetComponents = Set.of();
 
-		Set<Integer> widgetsToRestore = hiddenWidgetComponents;
-		boolean objectsWereHidden = !hiddenObjectIds.isEmpty();
-		hiddenObjectIds = Set.of();
-		hiddenNpcIds = Set.of();
-		hiddenWidgetComponents = Set.of();
-
-		clientThread.invokeLater(() -> restore(widgetsToRestore, objectsWereHidden));
+			widgetsToRestore.forEach(component -> setWidgetHidden(component, false));
+			if (objectsWereHidden && client.getGameState() == GameState.LOGGED_IN)
+			{
+				client.setGameState(GameState.LOADING);
+			}
+		});
 	}
 
 	@Subscribe
@@ -115,34 +129,45 @@ public class MinimalistPlugin extends Plugin
 			return;
 		}
 
+		clientThread.invokeLater(this::applyConfigChange);
+	}
+
+	private void applyConfigChange()
+	{
 		Set<Integer> previousObjectIds = hiddenObjectIds;
 		Set<Integer> previousWidgets = hiddenWidgetComponents;
 		rebuildHiddenSets();
+
+		previousWidgets.stream()
+			.filter(component -> !hiddenWidgetComponents.contains(component))
+			.forEach(component -> setWidgetHidden(component, false));
+
+		if (client.getGameState() != GameState.LOGGED_IN)
+		{
+			return;
+		}
 
 		// Removed objects can only come back with a scene reload; newly added ones
 		// are handled by a rescan of the already-loaded scene.
 		boolean needsSceneReload = previousObjectIds.stream()
 			.anyMatch(objectId -> !hiddenObjectIds.contains(objectId));
-		Set<Integer> widgetsToRestore = previousWidgets.stream()
-			.filter(component -> !hiddenWidgetComponents.contains(component))
-			.collect(Collectors.toSet());
-
-		clientThread.invokeLater(() ->
-		{
-			restore(widgetsToRestore, needsSceneReload);
-			if (!needsSceneReload)
-			{
-				rescanSceneIfLoggedIn();
-			}
-		});
-	}
-
-	private void restore(Set<Integer> widgetsToRestore, boolean sceneReloadNeeded)
-	{
-		widgetsToRestore.forEach(component -> setWidgetHidden(component, false));
-		if (sceneReloadNeeded && client.getGameState() == GameState.LOGGED_IN)
+		if (needsSceneReload)
 		{
 			client.setGameState(GameState.LOADING);
+			return;
+		}
+
+		rescanSceneIfLoggedIn();
+	}
+
+	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		// safety net: after every scene load (login, region change, or our own
+		// restore reload) sweep the fresh scene for anything spawn events missed
+		if (event.getGameState() == GameState.LOGGED_IN)
+		{
+			clientThread.invokeLater(this::rescanSceneIfLoggedIn);
 		}
 	}
 
