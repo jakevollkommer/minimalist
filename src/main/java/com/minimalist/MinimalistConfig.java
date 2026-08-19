@@ -187,7 +187,7 @@ public interface MinimalistConfig extends Config
 	@ConfigItem(
 		keyName = SUGGEST_BUTTON_KEY,
 		name = "Suggest content",
-		description = "Want another minigame or area covered? Tick to open the GitHub issues page (the box unticks itself)",
+		description = "Want another minigame or area covered? Click the box to open the GitHub issues page",
 		section = feedbackSection,
 		position = 1
 	)
@@ -199,7 +199,7 @@ public interface MinimalistConfig extends Config
 	@ConfigItem(
 		keyName = SUPPORT_BUTTON_KEY,
 		name = "Buy me a coffee ❤",
-		description = "Enjoying Minimalist? Tick to open the Ko-fi page (the box unticks itself)",
+		description = "Enjoying Minimalist? Click the box to open the Ko-fi page",
 		section = feedbackSection,
 		position = 2
 	)

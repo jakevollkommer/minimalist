@@ -68,7 +68,7 @@ import net.runelite.client.util.LinkBrowser;
 @PluginDescriptor(
 	name = "Minimalist",
 	description = "Hide non-interactable scenery objects, NPCs, and HUD elements at supported content",
-	tags = {"hide", "hider", "scenery", "declutter", "minimal", "gotr", "guardians", "rift"}
+	tags = {"jake", "hide", "hider", "scenery", "object", "objects", "npc", "entity", "declutter", "clean", "minimal", "gotr", "guardians", "rift", "runecrafting", "runecraft", "altar", "altars", "minigame", "hud"}
 )
 public class MinimalistPlugin extends Plugin implements RenderCallback
 {
@@ -110,9 +110,6 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 	@Inject
 	private MinimalistConfig config;
-
-	@Inject
-	private ConfigManager configManager;
 
 	@Provides
 	MinimalistConfig provideConfig(ConfigManager configManager)
@@ -472,12 +469,12 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	}
 
 	// The config panel cannot host real buttons, so the feedback "buttons" are checkboxes
-	// that open a link when ticked and immediately untick themselves.
+	// that act as buttons: any click of the box, tick or untick, opens the link.
 	private static boolean isFeedbackButtonPress(ConfigChanged event)
 	{
 		boolean isFeedbackButton = MinimalistConfig.SUGGEST_BUTTON_KEY.equals(event.getKey())
 			|| MinimalistConfig.SUPPORT_BUTTON_KEY.equals(event.getKey());
-		return isFeedbackButton && Boolean.parseBoolean(event.getNewValue());
+		return isFeedbackButton && event.getNewValue() != null;
 	}
 
 	private void openFeedbackLink(String buttonKey)
@@ -486,7 +483,6 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			? SUGGESTIONS_URL
 			: SUPPORT_URL;
 		LinkBrowser.browse(url);
-		configManager.setConfiguration(MinimalistConfig.GROUP, buttonKey, false);
 	}
 
 	private void applyConfigChange()
