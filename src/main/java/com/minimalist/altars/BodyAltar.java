@@ -44,10 +44,17 @@ class BodyAltar implements AltarRoom
 	public Set<Integer> distinctiveScenery()
 	{
 		return Set.of(
+			344 /* unnamed */,
+			345 /* unnamed */,
 			1385 /* unnamed */,
 			1386 /* Roots */,
 			1388 /* Roots */,
 			1389 /* Roots */,
+			1479 /* unnamed */,
+			1480 /* unnamed */,
+			1481 /* unnamed */,
+			1482 /* unnamed */,
+			1483 /* unnamed */,
 			1484 /* unnamed */);
 	}
 }
