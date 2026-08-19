@@ -109,7 +109,10 @@ final class GuardiansOfTheRift
 	 */
 	static final Set<Integer> BARRIER_AND_CELL_OBJECTS = Set.of(
 		43733, // Weak cells
-		43744, 43747, 43748, 43750, 43751, // Barriers
+		43744, 43745, // Weak Barrier
+		43746, 43747, // Medium Barrier
+		43748, 43749, // Strong Barrier
+		43750, 43751, // Overcharged Barrier
 		43752, 43753 // Elemental/Catalytic guide
 	);
 
