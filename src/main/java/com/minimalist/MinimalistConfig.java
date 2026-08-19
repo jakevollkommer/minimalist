@@ -178,6 +178,6 @@ public interface MinimalistConfig extends Config
 	)
 	default String suggestionsLink()
 	{
-		return "github.com/jakevollkommer/minimalist/issues";
+		return "github.com/jakevollkommer/osrs-minimalist/issues";
 	}
 }
