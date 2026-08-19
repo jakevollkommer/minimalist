@@ -212,6 +212,7 @@ final class GuardiansOfTheRift
 		1166, // Mushrooms
 		1176, 1177, // Waterlily
 		1189, // Daisies
+		1190, 1191, // Sunflowers
 		1194, // Tulips
 		1195, 1197, // Flowers, Flower
 		1246, 1247, // unnamed
@@ -224,8 +225,8 @@ final class GuardiansOfTheRift
 		1688, 1689, 1690, // unnamed wall decor
 		10820, // Oak tree (choppable, but only ever inside altars)
 		11174, 11175, // Cave rocks
-		11184, 11185, // Column
-		11192, 11193, // Rockslide
+		11184, 11185, 11186, // Column
+		11190, 11191, 11192, 11193, // Rockslide
 		11941, 11942, // Column
 		11944, // Stalagmites
 		12575, 12576, // Stalagmite

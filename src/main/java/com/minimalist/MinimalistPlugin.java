@@ -81,6 +81,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	private volatile boolean hideAltarScenery;
 	private volatile boolean hideArenaGenericScenery;
 	private volatile boolean sceneIsGotr;
+	private volatile boolean sceneHasAltar;
 	private volatile int activeElementalStatue = -1;
 	private volatile int activeCatalyticStatue = -1;
 
@@ -166,10 +167,12 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			return !isHiddenStatue(objectId);
 		}
 
-		// generic world IDs are hidden only inside their intended regions
+		// Generic world IDs are hidden only when the loaded scene is the relevant area.
+		// The gate uses the Scene parameter (always correct, even mid-upload) rather
+		// than per-object world coordinates, which are unreliable during scene upload.
 		boolean isAltarScenery = hideAltarScenery
 			&& GuardiansOfTheRift.ALTAR_SCENERY_OBJECTS.contains(objectId)
-			&& GuardiansOfTheRift.ALTAR_REGIONS.contains(object.getWorldLocation().getRegionID());
+			&& sceneContainsAnyRegion(scene, GuardiansOfTheRift.ALTAR_REGIONS);
 		if (isAltarScenery)
 		{
 			return false;
@@ -177,8 +180,13 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 		boolean isArenaGenericScenery = hideArenaGenericScenery
 			&& GuardiansOfTheRift.ARENA_GENERIC_SCENERY_OBJECTS.contains(objectId)
-			&& object.getWorldLocation().getRegionID() == GuardiansOfTheRift.ARENA_REGION;
+			&& sceneContainsAnyRegion(scene, Set.of(GuardiansOfTheRift.ARENA_REGION));
 		return !isArenaGenericScenery;
+	}
+
+	private static boolean sceneContainsAnyRegion(Scene scene, Set<Integer> regions)
+	{
+		return Arrays.stream(scene.getMapRegions()).anyMatch(regions::contains);
 	}
 
 	private boolean isHiddenNpc(NPC npc)
@@ -188,10 +196,10 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			return true;
 		}
 
-		// generic world NPCs are hidden only inside the altar rooms
+		// generic world NPCs are hidden only while an altar scene is loaded
 		return hideAltarScenery
-			&& GuardiansOfTheRift.ALTAR_NPCS.contains(npc.getId())
-			&& GuardiansOfTheRift.ALTAR_REGIONS.contains(npc.getWorldLocation().getRegionID());
+			&& sceneHasAltar
+			&& GuardiansOfTheRift.ALTAR_NPCS.contains(npc.getId());
 	}
 
 	private boolean isHiddenStatue(int statueObjectId)
@@ -268,11 +276,13 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		if (worldView == null)
 		{
 			sceneIsGotr = false;
+			sceneHasAltar = false;
 			return;
 		}
 
 		sceneIsGotr = Arrays.stream(worldView.getScene().getMapRegions())
 			.anyMatch(regionId -> regionId == GuardiansOfTheRift.ARENA_REGION);
+		sceneHasAltar = sceneContainsAnyRegion(worldView.getScene(), GuardiansOfTheRift.ALTAR_REGIONS);
 	}
 
 	// --- widgets ---
