@@ -47,13 +47,13 @@ public interface MinimalistConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrGuardianStatues", name = "Hide guardian statues", description = "The twelve inactive Guardian of Air/Water/... statues", section = gotrSection, position = 1)
+	@ConfigItem(keyName = "gotrGuardianStatues", name = "Hide inactive guardian statues", description = "Hide Guardian of Air/Water/... statues while inactive; active ones always show", section = gotrSection, position = 1)
 	default boolean gotrGuardianStatues()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrGuardianRemains", name = "Hide guardian remains", description = "Guardian parts, remains, and fallen guardians (mineable)", section = gotrSection, position = 2)
+	@ConfigItem(keyName = "gotrGuardianRemains", name = "Hide guardian remains", description = "Small guardian parts and depleted remains; large mineable remains always show", section = gotrSection, position = 2)
 	default boolean gotrGuardianRemains()
 	{
 		return true;
@@ -65,61 +65,67 @@ public interface MinimalistConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrBarriersAndCells", name = "Hide barriers and cells", description = "Barriers (including their hitsplats), the weak cells table, and the elemental/catalytic guides", section = gotrSection, position = 4)
+	@ConfigItem(keyName = "gotrBarriersAndCells", name = "Hide barriers and cells", description = "Barriers, the weak cells table, and the elemental/catalytic guides", section = gotrSection, position = 4)
 	default boolean gotrBarriersAndCells()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrEntranceScenery", name = "Hide entrance scenery", description = "Pillars, rubble, skeleton, cart, and fountain in the lobby", section = gotrSection, position = 5)
+	@ConfigItem(keyName = "gotrBarrierHitsplats", name = "Hide barrier hitsplats", description = "Hitsplats and health bars on the barriers", section = gotrSection, position = 5)
+	default boolean gotrBarrierHitsplats()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "gotrEntranceScenery", name = "Hide entrance scenery", description = "Pillars, rubble, skeleton, cart, and fountain in the lobby", section = gotrSection, position = 6)
 	default boolean gotrEntranceScenery()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrRain", name = "Hide rain", description = "The rain effect inside the temple", section = gotrSection, position = 6)
+	@ConfigItem(keyName = "gotrRain", name = "Hide rain", description = "The rain effect inside the temple", section = gotrSection, position = 7)
 	default boolean gotrRain()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrAbyssalCreatures", name = "Hide abyssal creatures", description = "Abyssal guardians, walkers, and leeches wandering the arena", section = gotrSection, position = 7)
+	@ConfigItem(keyName = "gotrAbyssalCreatures", name = "Hide abyssal creatures", description = "Abyssal guardians, walkers, and leeches wandering the arena", section = gotrSection, position = 8)
 	default boolean gotrAbyssalCreatures()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrSummonedGuardians", name = "Hide summoned guardians", description = "Catalytic and elemental guardians summoned by players", section = gotrSection, position = 8)
+	@ConfigItem(keyName = "gotrSummonedGuardians", name = "Hide summoned guardians", description = "Catalytic and elemental guardians summoned by players", section = gotrSection, position = 9)
 	default boolean gotrSummonedGuardians()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrApprentices", name = "Hide apprentices", description = "Apprentices Tamara, Cordelia, and Felix", section = gotrSection, position = 9)
+	@ConfigItem(keyName = "gotrApprentices", name = "Hide apprentices", description = "Apprentices Tamara, Cordelia, and Felix", section = gotrSection, position = 10)
 	default boolean gotrApprentices()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrRick", name = "Hide Rick", description = "Rick", section = gotrSection, position = 10)
+	@ConfigItem(keyName = "gotrRick", name = "Hide Rick", description = "Rick", section = gotrSection, position = 11)
 	default boolean gotrRick()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrHudPortalTimer", name = "Hide HUD portal timer", description = "The 'time since last portal' HUD text", section = gotrSection, position = 11)
+	@ConfigItem(keyName = "gotrHudPortalTimer", name = "Hide HUD portal timer", description = "The 'time since last portal' HUD text", section = gotrSection, position = 12)
 	default boolean gotrHudPortalTimer()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrHudGuardianCounter", name = "Hide HUD guardian counter", description = "The guardian count on the HUD", section = gotrSection, position = 12)
+	@ConfigItem(keyName = "gotrHudGuardianCounter", name = "Hide HUD guardian counter", description = "The guardian count on the HUD", section = gotrSection, position = 13)
 	default boolean gotrHudGuardianCounter()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrHudPortalLocation", name = "Hide HUD portal location", description = "The portal location text on the HUD", section = gotrSection, position = 13)
+	@ConfigItem(keyName = "gotrHudPortalLocation", name = "Hide HUD portal location", description = "The portal location text on the HUD", section = gotrSection, position = 14)
 	default boolean gotrHudPortalLocation()
 	{
 		return false;

@@ -82,10 +82,12 @@ final class GuardiansOfTheRift
 	static final int ACTIVE_GUARDIAN_ANIMATION = 9363;
 
 	/**
-	 * DEPLETED guardian remains only — the mined-out husks with no menu actions.
-	 * Mineable remains (43715-43721, all with a Mine action) are never hidden.
+	 * Small guardian parts and the depleted (mined-out) remains. The larger mineable
+	 * remains (43717-43721: Guardian remains, Large, Huge, Fallen guardian) are never
+	 * hidden so mining targets always stay visible.
 	 */
 	static final Set<Integer> GUARDIAN_REMAINS_OBJECTS = Set.of(
+		43715, 43716, // Guardian parts (small)
 		43796, 43797, 43798, 43799, 43800, 43801, 43804, 43805, // Guardian remains (depleted)
 		43803 // Rubble (depleted fallen guardian)
 	);

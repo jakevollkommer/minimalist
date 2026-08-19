@@ -26,7 +26,9 @@ package com.minimalist;
 
 import com.google.inject.Provides;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -43,6 +45,7 @@ import net.runelite.api.Renderable;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
 import net.runelite.api.WorldView;
+import net.runelite.api.events.BeforeRender;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.DecorativeObjectSpawned;
 import net.runelite.api.events.GameObjectDespawned;
@@ -82,6 +85,10 @@ public class MinimalistPlugin extends Plugin
 	 * rather than removed.
 	 */
 	private final Set<GameObject> guardianStatues = new HashSet<>();
+	private final Map<GameObject, Integer> lastActiveTickByStatue = new HashMap<>();
+	private static final int ACTIVE_STATUE_GRACE_TICKS = 8;
+	// TODO temporary diagnostics state; remove before hub submission
+	private int lastDiagnosticHiddenCount = -1;
 
 	private final Hooks.RenderableDrawListener drawListener = this::shouldDraw;
 
@@ -184,6 +191,7 @@ public class MinimalistPlugin extends Plugin
 		if (event.getGameState() == GameState.LOADING)
 		{
 			guardianStatues.clear();
+			lastActiveTickByStatue.clear();
 			hiddenStatueRenderables = Set.of();
 			return;
 		}
@@ -220,32 +228,40 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		Set<Renderable> previouslyHidden = hiddenStatueRenderables;
-		hiddenStatueRenderables = currentlyInactiveStatueRenderables();
-
 		// TODO temporary diagnostics for statue behavior; remove before hub submission
-		if (previouslyHidden.size() != hiddenStatueRenderables.size())
+		int hiddenCount = hiddenStatueRenderables.size();
+		if (hiddenCount != lastDiagnosticHiddenCount)
 		{
+			lastDiagnosticHiddenCount = hiddenCount;
 			log.info("[minimalist-diag] inactive statues hidden: {} of {} tracked",
-				hiddenStatueRenderables.size(), guardianStatues.size());
+				hiddenCount, guardianStatues.size());
 		}
 	}
 
-	private Set<Renderable> currentlyInactiveStatueRenderables()
+	@Subscribe
+	public void onBeforeRender(BeforeRender event)
 	{
+		// runs every frame: statue renderables get replaced by the client at will, so
+		// the hidden set must be rebuilt from fresh renderable identities each frame
+		// (bounded at 12 statues, so the per-frame cost is negligible)
 		if (!hideInactiveStatues || guardianStatues.isEmpty())
 		{
-			return Set.of();
+			hiddenStatueRenderables = Set.of();
+			return;
 		}
 
-		return guardianStatues.stream()
-			.filter(MinimalistPlugin::isInactiveStatue)
+		guardianStatues.stream()
+			.filter(MinimalistPlugin::isPlayingActiveAnimation)
+			.forEach(statue -> lastActiveTickByStatue.put(statue, client.getTickCount()));
+
+		hiddenStatueRenderables = guardianStatues.stream()
+			.filter(this::isOutsideActiveGraceWindow)
 			.map(GameObject::getRenderable)
 			.filter(Objects::nonNull)
 			.collect(Collectors.toUnmodifiableSet());
 	}
 
-	private static boolean isInactiveStatue(GameObject statue)
+	private static boolean isPlayingActiveAnimation(GameObject statue)
 	{
 		Renderable renderable = statue.getRenderable();
 		if (!(renderable instanceof DynamicObject))
@@ -254,8 +270,23 @@ public class MinimalistPlugin extends Plugin
 		}
 
 		Animation animation = ((DynamicObject) renderable).getAnimation();
-		boolean isActive = animation != null && animation.getId() == GuardiansOfTheRift.ACTIVE_GUARDIAN_ANIMATION;
-		return !isActive;
+		return animation != null && animation.getId() == GuardiansOfTheRift.ACTIVE_GUARDIAN_ANIMATION;
+	}
+
+	/**
+	 * Active statues cycle through non-active animation frames between loops, so a
+	 * statue only counts as inactive once it has not played the active animation for
+	 * a few ticks. This trades a few seconds of lag on deactivation for zero flicker.
+	 */
+	private boolean isOutsideActiveGraceWindow(GameObject statue)
+	{
+		Integer lastActiveTick = lastActiveTickByStatue.get(statue);
+		if (lastActiveTick == null)
+		{
+			return true;
+		}
+
+		return client.getTickCount() - lastActiveTick > ACTIVE_STATUE_GRACE_TICKS;
 	}
 
 	@Subscribe
@@ -296,6 +327,14 @@ public class MinimalistPlugin extends Plugin
 
 	private void hideIfCurated(TileObject spawnedObject, Tile tile)
 	{
+		// TODO temporary diagnostics for the guides not hiding; remove before hub submission
+		if (spawnedObject.getId() == 43752 || spawnedObject.getId() == 43753)
+		{
+			log.info("[minimalist-diag] guide id={} type={} at {} - willHide={}",
+				spawnedObject.getId(), spawnedObject.getClass().getSimpleName(),
+				spawnedObject.getWorldLocation(), isCuratedObject(spawnedObject));
+		}
+
 		if (hiddenObjectIds.isEmpty() || !isCuratedObject(spawnedObject))
 		{
 			return;
@@ -409,7 +448,7 @@ public class MinimalistPlugin extends Plugin
 			toggled(config.gotrSummonedGuardians(), GuardiansOfTheRift.SUMMONED_GUARDIAN_NPCS),
 			toggled(config.gotrApprentices(), GuardiansOfTheRift.APPRENTICE_NPCS),
 			toggled(config.gotrRick(), GuardiansOfTheRift.RICK_NPCS),
-			toggled(config.gotrBarriersAndCells(), GuardiansOfTheRift.BARRIER_NPCS));
+			toggled(config.gotrBarrierHitsplats(), GuardiansOfTheRift.BARRIER_NPCS));
 
 		hiddenWidgetComponents = union(
 			toggled(config.gotrHudPortalTimer(), Set.of(GuardiansOfTheRift.HUD_PORTAL_TIMER)),
