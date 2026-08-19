@@ -187,7 +187,7 @@ public interface MinimalistConfig extends Config
 	@ConfigItem(
 		keyName = SUGGEST_BUTTON_KEY,
 		name = "Suggest content",
-		description = "Want another minigame or area covered? Click the box to open the GitHub issues page",
+		description = "Want another minigame or area covered, or found a bug? Click the box to open the GitHub issues page",
 		section = feedbackSection,
 		position = 1
 	)
