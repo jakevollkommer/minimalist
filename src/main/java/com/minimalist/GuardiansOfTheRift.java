@@ -215,7 +215,7 @@ final class GuardiansOfTheRift
 		1189, // Daisies
 		1190, 1191, // Sunflowers
 		1194, // Tulips
-		1195, 1197, // Flowers, Flower
+		1195, 1197, 1198, // Flowers, Flower
 		1246, 1247, // unnamed
 		1276, 1282, 1286, 1289, 1384, // Tree, Dead tree (choppable, but only ever inside altars)
 		1385, // unnamed
@@ -233,6 +233,8 @@ final class GuardiansOfTheRift
 		12575, 12576, // Stalagmite
 		12577, // Stalactite
 		16318, // unnamed
+		20780, // Skeleton
+		39310, // unnamed
 		34780, 34781, 34782, // Pillar
 		34786, // unnamed
 		34789, 34790, 34791, 34792, 34793, 34794, // Mysterious glow
