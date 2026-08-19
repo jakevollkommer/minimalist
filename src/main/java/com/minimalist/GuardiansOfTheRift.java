@@ -206,6 +206,7 @@ final class GuardiansOfTheRift
 		731, 732, // unnamed
 		736, // Animal skull
 		119, // Party Balloon
+		169, // unnamed
 		724, // Standing torch
 		982, 984, 985, 986, // unnamed
 		1166, // Mushrooms
@@ -232,8 +233,8 @@ final class GuardiansOfTheRift
 		16318, // unnamed
 		34780, 34781, 34782, // Pillar
 		34786, // unnamed
-		34789, 34790, 34791, 34792, 34793, // Mysterious glow
-		34803, 34804, 34805, // Rubble
+		34789, 34790, 34791, 34792, 34793, 34794, // Mysterious glow
+		34803, 34804, 34805, 34806, // Rubble/unnamed
 		37706, 37707, 37773, // unnamed
 		41907, // unnamed
 		43504, // Rain (blood altar)
