@@ -1,0 +1,50 @@
+/*
+ * Copyright (c) 2026, Jake Vollkommer
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+package com.minimalist.altars;
+
+import java.util.Set;
+
+/**
+ * Decoration that appears across multiple altar rooms. The Altar, exit Portal, and
+ * anything functional (ladders, etc.) are never listed here.
+ */
+public final class SharedAltarScenery
+{
+	public static final Set<Integer> OBJECTS = Set.of(
+		34780, 34781, 34782, // Pillar
+		34789, 34790, 34791, 34792, 34793, 34794, // Mysterious glow
+		34803, 34804, 34805, 34806, // Rubble
+		724, // Standing torch
+		// trees: choppable, but these only ever appear inside altar rooms
+		1276, 1278, 1282, 1286, 1289, 1384, 10820,
+		// flowers and plants
+		1133, 1166, 1189, 1194, 1195, 1197, 1198, 1391,
+		1246, 1247 // unnamed
+	);
+
+	private SharedAltarScenery()
+	{
+	}
+}

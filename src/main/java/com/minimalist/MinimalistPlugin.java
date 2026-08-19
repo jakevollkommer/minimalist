@@ -25,11 +25,18 @@
 package com.minimalist;
 
 import com.google.inject.Provides;
+import com.minimalist.altars.AltarRoom;
+import com.minimalist.altars.Altars;
+import com.minimalist.gotr.GotrArena;
+import com.minimalist.gotr.GotrHud;
+import com.minimalist.gotr.GotrNpcs;
+import com.minimalist.gotr.GuardianStatues;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -81,7 +88,8 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	private volatile boolean hideAltarScenery;
 	private volatile boolean hideArenaGenericScenery;
 	private volatile boolean sceneIsGotr;
-	private volatile boolean sceneHasAltar;
+	@Nullable
+	private volatile AltarRoom currentAltar;
 	private volatile int activeElementalStatue = -1;
 	private volatile int activeCatalyticStatue = -1;
 
@@ -111,7 +119,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		{
 			rebuildHiddenSets();
 			refreshHeldTalismans();
-			refreshSceneIsGotr();
+			refreshSceneFlags();
 			reloadSceneIfLoggedIn();
 		});
 	}
@@ -127,13 +135,15 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			hiddenNpcIds = Set.of();
 			hiddenWidgetComponents = Set.of();
 			hideInactiveStatues = false;
+			hideAltarScenery = false;
+			hideArenaGenericScenery = false;
 
 			widgetsToRestore.forEach(component -> setWidgetHidden(component, false));
 			reloadSceneIfLoggedIn();
 		});
 	}
 
-	// --- RenderCallback ---
+	// --- RenderCallback: the single place visibility is decided ---
 
 	@Override
 	public boolean addEntity(Renderable renderable, boolean drawingUi)
@@ -160,33 +170,14 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			return false;
 		}
 
-		if (GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(objectId))
+		if (GuardianStatues.STATUE_OBJECTS.contains(objectId))
 		{
 			// animated objects pass through here every frame, so statue visibility
 			// follows rotations and inventory instantly
 			return !isHiddenStatue(objectId);
 		}
 
-		// Generic world IDs are hidden only when the loaded scene is the relevant area.
-		// The gate uses the Scene parameter (always correct, even mid-upload) rather
-		// than per-object world coordinates, which are unreliable during scene upload.
-		boolean isAltarScenery = hideAltarScenery
-			&& GuardiansOfTheRift.ALTAR_SCENERY_OBJECTS.contains(objectId)
-			&& sceneContainsAnyRegion(scene, GuardiansOfTheRift.ALTAR_REGIONS);
-		if (isAltarScenery)
-		{
-			return false;
-		}
-
-		boolean isArenaGenericScenery = hideArenaGenericScenery
-			&& GuardiansOfTheRift.ARENA_GENERIC_SCENERY_OBJECTS.contains(objectId)
-			&& sceneContainsAnyRegion(scene, Set.of(GuardiansOfTheRift.ARENA_REGION));
-		return !isArenaGenericScenery;
-	}
-
-	private static boolean sceneContainsAnyRegion(Scene scene, Set<Integer> regions)
-	{
-		return Arrays.stream(scene.getMapRegions()).anyMatch(regions::contains);
+		return !isHiddenAltarScenery(scene, objectId) && !isHiddenArenaGenericScenery(scene, objectId);
 	}
 
 	private boolean isHiddenNpc(NPC npc)
@@ -196,10 +187,8 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			return true;
 		}
 
-		// generic world NPCs are hidden only while an altar scene is loaded
-		return hideAltarScenery
-			&& sceneHasAltar
-			&& GuardiansOfTheRift.ALTAR_NPCS.contains(npc.getId());
+		AltarRoom altar = currentAltar;
+		return hideAltarScenery && altar != null && altar.hiddenNpcs().contains(npc.getId());
 	}
 
 	private boolean isHiddenStatue(int statueObjectId)
@@ -210,26 +199,54 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			&& !heldTalismanStatues.contains(statueObjectId);
 	}
 
+	/**
+	 * Altar decoration uses generic world IDs, so it is only hidden when the loaded
+	 * scene resolves to an altar. The gate reads the Scene parameter — correct even
+	 * during scene upload — never per-object world coordinates.
+	 */
+	private boolean isHiddenAltarScenery(Scene scene, int objectId)
+	{
+		if (!hideAltarScenery)
+		{
+			return false;
+		}
+
+		AltarRoom altar = Altars.forScene(scene);
+		return altar != null && Altars.isAltarScenery(altar, objectId);
+	}
+
+	private boolean isHiddenArenaGenericScenery(Scene scene, int objectId)
+	{
+		return hideArenaGenericScenery
+			&& GotrArena.ARENA_GENERIC_SCENERY_OBJECTS.contains(objectId)
+			&& sceneContainsRegion(scene, GotrArena.ARENA_REGION);
+	}
+
+	private static boolean sceneContainsRegion(Scene scene, int regionId)
+	{
+		return Arrays.stream(scene.getMapRegions()).anyMatch(sceneRegion -> sceneRegion == regionId);
+	}
+
 	// --- game state tracking ---
 
 	@Subscribe
 	public void onScriptPreFired(ScriptPreFired event)
 	{
-		if (event.getScriptId() != GuardiansOfTheRift.HUD_UPDATE_SCRIPT)
+		if (event.getScriptId() != GotrHud.UPDATE_SCRIPT)
 		{
 			return;
 		}
 
 		Object[] arguments = event.getScriptEvent().getArguments();
-		if (arguments == null || arguments.length <= GuardiansOfTheRift.HUD_ARG_ACTIVE_CATALYTIC)
+		if (arguments == null || arguments.length <= GotrHud.ARG_ACTIVE_CATALYTIC)
 		{
 			return;
 		}
 
-		int elementalIndex = asInt(arguments[GuardiansOfTheRift.HUD_ARG_ACTIVE_ELEMENTAL]);
-		int catalyticIndex = asInt(arguments[GuardiansOfTheRift.HUD_ARG_ACTIVE_CATALYTIC]);
-		activeElementalStatue = GuardiansOfTheRift.ELEMENTAL_STATUE_BY_INDEX.getOrDefault(elementalIndex, -1);
-		activeCatalyticStatue = GuardiansOfTheRift.CATALYTIC_STATUE_BY_INDEX.getOrDefault(catalyticIndex, -1);
+		int elementalIndex = asInt(arguments[GotrHud.ARG_ACTIVE_ELEMENTAL]);
+		int catalyticIndex = asInt(arguments[GotrHud.ARG_ACTIVE_CATALYTIC]);
+		activeElementalStatue = GuardianStatues.STATUE_BY_ELEMENTAL_INDEX.getOrDefault(elementalIndex, -1);
+		activeCatalyticStatue = GuardianStatues.STATUE_BY_CATALYTIC_INDEX.getOrDefault(catalyticIndex, -1);
 	}
 
 	@Subscribe
@@ -251,7 +268,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		}
 
 		Set<Integer> held = new HashSet<>();
-		GuardiansOfTheRift.TALISMAN_BY_STATUE.forEach((statueId, talismanId) ->
+		GuardianStatues.TALISMAN_BY_STATUE.forEach((statueId, talismanId) ->
 		{
 			if (inventory.contains(talismanId))
 			{
@@ -266,23 +283,23 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	{
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			clientThread.invokeLater(this::refreshSceneIsGotr);
+			clientThread.invokeLater(this::refreshSceneFlags);
 		}
 	}
 
-	private void refreshSceneIsGotr()
+	private void refreshSceneFlags()
 	{
 		WorldView worldView = client.getTopLevelWorldView();
 		if (worldView == null)
 		{
 			sceneIsGotr = false;
-			sceneHasAltar = false;
+			currentAltar = null;
 			return;
 		}
 
-		sceneIsGotr = Arrays.stream(worldView.getScene().getMapRegions())
-			.anyMatch(regionId -> regionId == GuardiansOfTheRift.ARENA_REGION);
-		sceneHasAltar = sceneContainsAnyRegion(worldView.getScene(), GuardiansOfTheRift.ALTAR_REGIONS);
+		Scene scene = worldView.getScene();
+		sceneIsGotr = sceneContainsRegion(scene, GotrArena.ARENA_REGION);
+		currentAltar = Altars.forScene(scene);
 	}
 
 	// --- widgets ---
@@ -346,7 +363,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 	private boolean isHiddenStatueEntry(MenuEntry entry)
 	{
-		return GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(entry.getIdentifier())
+		return GuardianStatues.STATUE_OBJECTS.contains(entry.getIdentifier())
 			&& isObjectAction(entry.getType())
 			&& isHiddenStatue(entry.getIdentifier());
 	}
@@ -392,12 +409,17 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			.filter(component -> !hiddenWidgetComponents.contains(component))
 			.forEach(component -> setWidgetHidden(component, false));
 
+		if (client.getGameState() != GameState.LOGGED_IN)
+		{
+			return;
+		}
+
 		// static scenery filtering is applied when the scene uploads, so changes to it
 		// take one reload; statue, NPC, projectile, and widget changes apply live
-		boolean staticSetChanged = !previousObjectIds.equals(hiddenObjectIds)
+		boolean staticSceneryChanged = !previousObjectIds.equals(hiddenObjectIds)
 			|| previousAltarScenery != hideAltarScenery
 			|| previousArenaGenerics != hideArenaGenericScenery;
-		if (staticSetChanged)
+		if (staticSceneryChanged)
 		{
 			reloadSceneIfLoggedIn();
 		}
@@ -417,25 +439,26 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		hideProjectiles = config.gotrProjectiles();
 		hideAltarScenery = config.gotrAltarScenery();
 		hideArenaGenericScenery = config.gotrAbyssScenery();
+
 		hiddenObjectIds = union(
-			toggled(config.gotrAbyssScenery(), GuardiansOfTheRift.ABYSS_SCENERY_OBJECTS),
-			toggled(config.gotrGuardianRemains(), GuardiansOfTheRift.GUARDIAN_REMAINS_OBJECTS),
-			toggled(config.gotrEssencePiles(), GuardiansOfTheRift.ESSENCE_PILE_OBJECTS),
-			toggled(config.gotrBarriersAndCells(), GuardiansOfTheRift.BARRIER_AND_CELL_OBJECTS),
-			toggled(config.gotrEntranceScenery(), GuardiansOfTheRift.ENTRANCE_SCENERY_OBJECTS),
-			toggled(config.gotrRain(), GuardiansOfTheRift.RAIN_OBJECTS));
+			toggled(config.gotrAbyssScenery(), GotrArena.ABYSS_SCENERY_OBJECTS),
+			toggled(config.gotrGuardianRemains(), GotrArena.GUARDIAN_REMAINS_OBJECTS),
+			toggled(config.gotrEssencePiles(), GotrArena.ESSENCE_PILE_OBJECTS),
+			toggled(config.gotrBarriersAndCells(), GotrArena.BARRIER_AND_CELL_OBJECTS),
+			toggled(config.gotrEntranceScenery(), GotrArena.ENTRANCE_SCENERY_OBJECTS),
+			toggled(config.gotrRain(), GotrArena.RAIN_OBJECTS));
 
 		hiddenNpcIds = union(
-			toggled(config.gotrAbyssalCreatures(), GuardiansOfTheRift.ABYSSAL_CREATURE_NPCS),
-			toggled(config.gotrSummonedGuardians(), GuardiansOfTheRift.SUMMONED_GUARDIAN_NPCS),
-			toggled(config.gotrApprentices(), GuardiansOfTheRift.APPRENTICE_NPCS),
-			toggled(config.gotrRick(), GuardiansOfTheRift.RICK_NPCS),
-			toggled(config.gotrBarrierHitsplats(), GuardiansOfTheRift.BARRIER_NPCS));
+			toggled(config.gotrAbyssalCreatures(), GotrNpcs.ABYSSAL_CREATURES),
+			toggled(config.gotrSummonedGuardians(), GotrNpcs.SUMMONED_GUARDIANS),
+			toggled(config.gotrApprentices(), GotrNpcs.APPRENTICES),
+			toggled(config.gotrRick(), GotrNpcs.RICK),
+			toggled(config.gotrBarrierHitsplats(), GotrNpcs.BARRIER_HITPOINT_HOLDERS));
 
 		hiddenWidgetComponents = union(
-			toggled(config.gotrHudPortalTimer(), Set.of(GuardiansOfTheRift.HUD_PORTAL_TIMER)),
-			toggled(config.gotrHudGuardianCounter(), Set.of(GuardiansOfTheRift.HUD_GUARDIAN_COUNTER)),
-			toggled(config.gotrHudPortalLocation(), Set.of(GuardiansOfTheRift.HUD_PORTAL_LOCATION)));
+			toggled(config.gotrHudPortalTimer(), Set.of(GotrHud.PORTAL_TIMER_COMPONENT)),
+			toggled(config.gotrHudGuardianCounter(), Set.of(GotrHud.GUARDIAN_COUNTER_COMPONENT)),
+			toggled(config.gotrHudPortalLocation(), Set.of(GotrHud.PORTAL_LOCATION_COMPONENT)));
 	}
 
 	private static Set<Integer> toggled(boolean enabled, Set<Integer> curatedIds)
