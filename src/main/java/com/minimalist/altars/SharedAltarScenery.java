@@ -34,6 +34,8 @@ public final class SharedAltarScenery
 {
 	public static final Set<Integer> OBJECTS = Set.of(
 		34780, 34781, 34782, // Pillar
+		34786, // unnamed pillar variant
+		1421, // unnamed
 		34789, 34790, 34791, 34792, 34793, 34794, // Mysterious glow
 		34803, 34804, 34805, 34806, // Rubble
 		724, // Standing torch
