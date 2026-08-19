@@ -81,6 +81,25 @@ final class GuardiansOfTheRift
 		43701, 43702, 43703, 43704, 43705, 43706, 43707, 43708, 43709, 43710, 43711, 43712
 	);
 
+	/**
+	 * Each guardian statue's matching portal talisman item — holding it allows entering
+	 * that guardian even while inactive, so its menu must never be stripped.
+	 */
+	static final java.util.Map<Integer, Integer> TALISMAN_BY_STATUE = java.util.Map.ofEntries(
+		java.util.Map.entry(43701, 26887), // Air
+		java.util.Map.entry(43702, 26888), // Water
+		java.util.Map.entry(43703, 26889), // Earth
+		java.util.Map.entry(43704, 26890), // Fire
+		java.util.Map.entry(43705, 26891), // Mind
+		java.util.Map.entry(43706, 26892), // Chaos
+		java.util.Map.entry(43707, 26893), // Death
+		java.util.Map.entry(43708, 26894), // Blood
+		java.util.Map.entry(43709, 26895), // Body
+		java.util.Map.entry(43710, 26896), // Cosmic
+		java.util.Map.entry(43711, 26897), // Nature
+		java.util.Map.entry(43712, 26898)  // Law
+	);
+
 	/** The animation a guardian statue plays while its altar is active. */
 	static final int ACTIVE_GUARDIAN_ANIMATION = 9363;
 

@@ -274,11 +274,29 @@ public class MinimalistPlugin extends Plugin
 			return false;
 		}
 
+		// holding the matching portal talisman allows entering an inactive guardian
+		if (isHoldingTalismanFor(entry.getIdentifier()))
+		{
+			return false;
+		}
+
 		return diagStatues.stream()
 			.filter(statue -> statue.getId() == entry.getIdentifier())
 			.findFirst()
 			.map(statue -> !isStatueActive(statue))
 			.orElse(false);
+	}
+
+	private boolean isHoldingTalismanFor(int statueObjectId)
+	{
+		Integer talismanItemId = GuardiansOfTheRift.TALISMAN_BY_STATUE.get(statueObjectId);
+		if (talismanItemId == null)
+		{
+			return false;
+		}
+
+		net.runelite.api.ItemContainer inventory = client.getItemContainer(net.runelite.api.gameval.InventoryID.INV);
+		return inventory != null && inventory.contains(talismanItemId);
 	}
 
 	private static boolean isObjectAction(net.runelite.api.MenuAction action)
