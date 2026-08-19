@@ -44,6 +44,7 @@ class WaterAltar implements AltarRoom
 	public Set<Integer> distinctiveScenery()
 	{
 		return Set.of(
+			1175 /* Waterlily */,
 			1176 /* Waterlily */,
 			1177 /* Waterlily */);
 	}

@@ -321,11 +321,30 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		Scene scene = worldView.getScene();
 		sceneIsGotr = sceneContainsRegion(scene, GotrArena.ARENA_REGION);
 		currentAltarHiddenNpcIds = Altars.hiddenNpcsForScene(scene);
+		warnIfSceneryHidingUnavailable(scene);
+	}
 
-		// TODO temporary diagnostics to capture each altar's true scene regions;
-		// remove before hub submission
-		log.info("[minimalist-diag] scene regions={} altarNpcs={}",
-			Arrays.toString(scene.getMapRegions()), currentAltarHiddenNpcIds);
+	private boolean warnedAboutSoftwareRenderer;
+
+	/**
+	 * Scenery hiding works through the render callback, which only GPU renderers
+	 * (GPU, GPU with region locker, 117HD) consult — the software renderer never asks.
+	 * Warn once per session so players are not left wondering why nothing hides.
+	 */
+	private void warnIfSceneryHidingUnavailable(Scene scene)
+	{
+		boolean sceneHasHideableContent = sceneIsGotr || Altars.hasAltarInScene(scene);
+		boolean sceneryHidingWanted = !hiddenObjectIds.isEmpty() || hideAltarScenery;
+		boolean rendererSupportsHiding = client.getDrawCallbacks() != null;
+		if (warnedAboutSoftwareRenderer || !sceneHasHideableContent || !sceneryHidingWanted || rendererSupportsHiding)
+		{
+			return;
+		}
+
+		warnedAboutSoftwareRenderer = true;
+		client.addChatMessage(net.runelite.api.ChatMessageType.GAMEMESSAGE, "",
+			"<col=e00a19>Minimalist:</col> hiding scenery requires a GPU renderer - enable the GPU plugin (or 117HD).",
+			null);
 	}
 
 	// --- widgets ---

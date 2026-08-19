@@ -120,6 +120,26 @@ public final class Altars
 			.collect(Collectors.toUnmodifiableSet());
 	}
 
+	/** True when the loaded scene spans any altar's regions. */
+	public static boolean hasAltarInScene(Scene scene)
+	{
+		int[] sceneRegions = scene.getMapRegions();
+		if (sceneRegions == null)
+		{
+			return false;
+		}
+
+		for (int regionId : sceneRegions)
+		{
+			if (altarForRegion(regionId) != null)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	@Nullable
 	private static AltarRoom altarForRegion(int regionId)
 	{
