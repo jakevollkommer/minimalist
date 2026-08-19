@@ -60,8 +60,13 @@ import net.runelite.client.plugins.PluginDescriptor;
 	description = "Hide non-interactable scenery objects, NPCs, and HUD elements at supported content",
 	tags = {"hide", "hider", "scenery", "declutter", "minimal", "gotr", "guardians", "rift"}
 )
+@lombok.extern.slf4j.Slf4j
 public class MinimalistPlugin extends Plugin
 {
+	// TODO temporary diagnostics for statue behavior; remove before hub submission
+	private static final Set<Integer> DIAG_ACTIVE_STATUES = Set.of(
+		43701, 43702, 43703, 43704, 43705, 43706, 43707, 43708, 43709, 43710, 43711, 43712);
+
 	// written on the client thread; volatile because the renderer thread reads
 	// hiddenNpcIds through the draw listener
 	private volatile Set<Integer> hiddenObjectIds = Set.of();
@@ -174,7 +179,30 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onGameObjectSpawned(GameObjectSpawned event)
 	{
+		logStatueDiagnostics("spawn", event.getGameObject());
 		hideIfCurated(event.getGameObject(), event.getTile());
+	}
+
+	@Subscribe
+	public void onGameObjectDespawned(net.runelite.api.events.GameObjectDespawned event)
+	{
+		logStatueDiagnostics("despawn", event.getGameObject());
+	}
+
+	// TODO temporary diagnostics for statue behavior; remove before hub submission
+	private void logStatueDiagnostics(String eventName, GameObject gameObject)
+	{
+		int id = gameObject.getId();
+		boolean isActiveStatue = DIAG_ACTIVE_STATUES.contains(id);
+		boolean isInactiveStatue = GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(id);
+		if (!isActiveStatue && !isInactiveStatue)
+		{
+			return;
+		}
+
+		log.info("[minimalist-diag] statue {} id={} ({}) at {} - hide decision: {}",
+			eventName, id, isActiveStatue ? "ACTIVE" : "INACTIVE",
+			gameObject.getWorldLocation(), isCuratedObject(gameObject));
 	}
 
 	@Subscribe
