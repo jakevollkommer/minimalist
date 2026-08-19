@@ -91,6 +91,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	private volatile boolean hideAltarScenery;
 	private volatile boolean hideArenaGenericScenery;
 	private volatile boolean sceneIsGotr;
+	private volatile boolean sceneHasAltar;
 	private volatile Set<Integer> currentAltarHiddenNpcIds = Set.of();
 	private volatile int activeElementalStatue = -1;
 	private volatile int activeCatalyticStatue = -1;
@@ -162,7 +163,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 		if (renderable instanceof Projectile)
 		{
-			return !(hideProjectiles && sceneIsGotr);
+			return !(hideProjectiles && isAtGotrContent());
 		}
 
 		return true;
@@ -204,7 +205,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			return true;
 		}
 
-		if (hideOtherPlayersPets && sceneIsGotr && isSomeoneElsesPet(npc))
+		if (hideOtherPlayersPets && isAtGotrContent() && isSomeoneElsesPet(npc))
 		{
 			return true;
 		}
@@ -219,7 +220,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 	private boolean isHiddenPlayer(Player player, boolean drawingUi)
 	{
-		boolean isOtherPlayerAtGotr = sceneIsGotr && player != client.getLocalPlayer();
+		boolean isOtherPlayerAtGotr = isAtGotrContent() && player != client.getLocalPlayer();
 		if (!isOtherPlayerAtGotr)
 		{
 			return false;
@@ -255,7 +256,14 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 	private static boolean sceneContainsRegion(Scene scene, int regionId)
 	{
-		return Arrays.stream(scene.getMapRegions()).anyMatch(sceneRegion -> sceneRegion == regionId);
+		int[] sceneRegions = scene.getMapRegions();
+		if (sceneRegions == null)
+		{
+			// no scene is loaded yet (login screen)
+			return false;
+		}
+
+		return Arrays.stream(sceneRegions).anyMatch(sceneRegion -> sceneRegion == regionId);
 	}
 
 	// --- game state tracking ---
@@ -324,14 +332,27 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		if (worldView == null)
 		{
 			sceneIsGotr = false;
+			sceneHasAltar = false;
 			currentAltarHiddenNpcIds = Set.of();
 			return;
 		}
 
 		Scene scene = worldView.getScene();
 		sceneIsGotr = sceneContainsRegion(scene, GotrArena.ARENA_REGION);
+		sceneHasAltar = Altars.hasAltarInScene(scene);
 		currentAltarHiddenNpcIds = Altars.hiddenNpcsForScene(scene);
 		warnIfSceneryHidingUnavailable(scene);
+
+		// TODO temporary diagnostics to capture each altar's true scene regions;
+		// remove before hub submission
+		log.info("[minimalist-diag] scene regions={} gotr={} altar={} altarNpcs={}",
+			Arrays.toString(scene.getMapRegions()), sceneIsGotr, sceneHasAltar, currentAltarHiddenNpcIds);
+	}
+
+	/** Entity hiding applies at GOTR and inside the runecrafting altars reached from it. */
+	private boolean isAtGotrContent()
+	{
+		return sceneIsGotr || sceneHasAltar;
 	}
 
 	private boolean warnedAboutSoftwareRenderer;
