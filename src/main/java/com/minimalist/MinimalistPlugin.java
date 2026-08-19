@@ -417,6 +417,23 @@ public class MinimalistPlugin extends Plugin
 	// TODO temporary diagnostics; remove before hub submission
 	private final Map<String, Integer> diagRemovedById = new HashMap<>();
 
+	// TODO temporary diagnostics: varbit sniffing to find the active-altar varbits;
+	// remove before hub submission
+	@Subscribe
+	public void onVarbitChanged(net.runelite.api.events.VarbitChanged event)
+	{
+		boolean isPlausibleAltarVarbit = sceneIsGotr
+			&& event.getVarbitId() != -1
+			&& event.getValue() >= 0 && event.getValue() <= 15;
+		if (!isPlausibleAltarVarbit)
+		{
+			return;
+		}
+
+		log.info("[minimalist-varbit] tick={} varbit={} value={}",
+			client.getTickCount(), event.getVarbitId(), event.getValue());
+	}
+
 	/**
 	 * Ground, wall, and decorative objects have no individual removal API, and clearing
 	 * them off the tile does not un-draw them. Removing the whole tile does, but also
@@ -540,29 +557,29 @@ public class MinimalistPlugin extends Plugin
 	private final java.util.concurrent.atomic.AtomicInteger diagDynamicDraws = new java.util.concurrent.atomic.AtomicInteger();
 	private final java.util.concurrent.atomic.AtomicInteger diagStatueAnimDraws = new java.util.concurrent.atomic.AtomicInteger();
 	private final Set<GameObject> diagStatues = new java.util.HashSet<>();
-	private int diagTickCounter;
+
+	private String diagPreviousActive = "";
 
 	@Subscribe
 	public void onGameTick(net.runelite.api.events.GameTick event)
 	{
-		if (++diagTickCounter % 10 != 0 || diagStatues.isEmpty())
+		if (diagStatues.isEmpty())
 		{
 			return;
 		}
 
-		String statueStates = diagStatues.stream()
-			.map(statue ->
-			{
-				Renderable renderable = statue.getRenderable();
-				Animation animation = renderable instanceof DynamicObject
-					? ((DynamicObject) renderable).getAnimation() : null;
-				String renderableType = renderable == null ? "null" : renderable.getClass().getSimpleName();
-				return statue.getId() + "=" + (animation == null ? "noAnim/" + renderableType : animation.getId());
-			})
+		String activeStatues = diagStatues.stream()
+			.filter(MinimalistPlugin::isStatueActive)
+			.map(statue -> String.valueOf(statue.getId()))
 			.sorted()
-			.collect(Collectors.joining(", "));
-		log.info("[minimalist-diag] statues [{}] | drawCallback last10ticks: dynamicObjects={} statueAnims={}",
-			statueStates, diagDynamicDraws.getAndSet(0), diagStatueAnimDraws.getAndSet(0));
+			.collect(Collectors.joining(","));
+		if (activeStatues.equals(diagPreviousActive))
+		{
+			return;
+		}
+
+		diagPreviousActive = activeStatues;
+		log.info("[minimalist-rotation] tick={} active=[{}]", client.getTickCount(), activeStatues);
 	}
 
 	private void recordIfUncuratedGotrObject(TileObject tileObject)
