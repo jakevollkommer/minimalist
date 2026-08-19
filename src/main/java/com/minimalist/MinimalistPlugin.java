@@ -168,10 +168,20 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		return true;
 	}
 
+	// TODO temporary diagnostics; remove before hub submission
+	private final java.util.concurrent.atomic.AtomicInteger diagGlowLogCount = new java.util.concurrent.atomic.AtomicInteger();
+
 	@Override
 	public boolean drawObject(Scene scene, TileObject object)
 	{
 		int objectId = object.getId();
+
+		// TODO temporary diagnostics; remove before hub submission
+		if (objectId == 34791 && diagGlowLogCount.getAndIncrement() < 5)
+		{
+			log.info("[minimalist-diag] drawObject 34791: hideAltarScenery={} sceneRegions={} verdictHidden={}",
+				hideAltarScenery, Arrays.toString(scene.getMapRegions()), isHiddenAltarScenery(scene, objectId));
+		}
 		if (hiddenObjectIds.contains(objectId))
 		{
 			return false;
