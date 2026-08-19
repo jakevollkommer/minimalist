@@ -44,6 +44,7 @@ import net.runelite.api.ItemContainer;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.NPC;
+import net.runelite.api.Player;
 import net.runelite.api.Projectile;
 import net.runelite.api.Renderable;
 import net.runelite.api.Scene;
@@ -85,6 +86,9 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	private volatile Set<Integer> heldTalismanStatues = Set.of();
 	private volatile boolean hideInactiveStatues;
 	private volatile boolean hideProjectiles;
+	private volatile boolean hideOtherPlayers;
+	private volatile boolean hideOtherPlayers2d;
+	private volatile boolean hideOtherPlayersPets;
 	private volatile boolean hideAltarScenery;
 	private volatile boolean hideArenaGenericScenery;
 	private volatile boolean sceneIsGotr;
@@ -153,6 +157,11 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			return !isHiddenNpc((NPC) renderable);
 		}
 
+		if (renderable instanceof Player)
+		{
+			return !isHiddenPlayer((Player) renderable, drawingUi);
+		}
+
 		if (renderable instanceof Projectile)
 		{
 			return !(hideProjectiles && sceneIsGotr);
@@ -187,8 +196,29 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			return true;
 		}
 
+		if (hideOtherPlayersPets && sceneIsGotr && isSomeoneElsesPet(npc))
+		{
+			return true;
+		}
+
 		AltarRoom altar = currentAltar;
 		return hideAltarScenery && altar != null && altar.hiddenNpcs().contains(npc.getId());
+	}
+
+	private boolean isSomeoneElsesPet(NPC npc)
+	{
+		return npc.getComposition().isFollower() && npc != client.getFollower();
+	}
+
+	private boolean isHiddenPlayer(Player player, boolean drawingUi)
+	{
+		boolean isOtherPlayerAtGotr = sceneIsGotr && player != client.getLocalPlayer();
+		if (!isOtherPlayerAtGotr)
+		{
+			return false;
+		}
+
+		return drawingUi ? hideOtherPlayers2d : hideOtherPlayers;
 	}
 
 	private boolean isHiddenStatue(int statueObjectId)
@@ -437,6 +467,9 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	{
 		hideInactiveStatues = config.gotrGuardianStatues();
 		hideProjectiles = config.gotrProjectiles();
+		hideOtherPlayers = config.gotrOtherPlayers();
+		hideOtherPlayers2d = config.gotrOtherPlayers2d();
+		hideOtherPlayersPets = config.gotrOtherPlayersPets();
 		hideAltarScenery = config.gotrAltarScenery();
 		hideArenaGenericScenery = config.gotrAbyssScenery();
 

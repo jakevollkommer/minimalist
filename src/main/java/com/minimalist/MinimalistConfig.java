@@ -47,7 +47,7 @@ public interface MinimalistConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrGuardianStatues", name = "Hide inactive guardian statues", description = "Show only the two active guardians (and any whose portal talisman you hold) as client-side stand-ins; all other statues are hidden", section = gotrSection, position = 1)
+	@ConfigItem(keyName = "gotrGuardianStatues", name = "Hide inactive guardian statues", description = "Show only the two active guardians and any whose portal talisman you hold; the rest are hidden and unclickable until they activate", section = gotrSection, position = 1)
 	default boolean gotrGuardianStatues()
 	{
 		return true;
@@ -125,19 +125,37 @@ public interface MinimalistConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrHudPortalTimer", name = "Hide HUD portal timer", description = "The 'time since last portal' HUD text", section = gotrSection, position = 14)
+	@ConfigItem(keyName = "gotrOtherPlayers", name = "Hide other players", description = "Hide other players while at Guardians of the Rift", section = gotrSection, position = 14)
+	default boolean gotrOtherPlayers()
+	{
+		return false;
+	}
+
+	@ConfigItem(keyName = "gotrOtherPlayers2d", name = "Hide other players 2D", description = "Hide other players' overhead text, hitsplats, and health bars while at Guardians of the Rift", section = gotrSection, position = 15)
+	default boolean gotrOtherPlayers2d()
+	{
+		return false;
+	}
+
+	@ConfigItem(keyName = "gotrOtherPlayersPets", name = "Hide other players' pets", description = "Hide pets that are not yours while at Guardians of the Rift", section = gotrSection, position = 16)
+	default boolean gotrOtherPlayersPets()
+	{
+		return false;
+	}
+
+	@ConfigItem(keyName = "gotrHudPortalTimer", name = "Hide HUD portal timer", description = "The 'time since last portal' HUD text", section = gotrSection, position = 17)
 	default boolean gotrHudPortalTimer()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrHudGuardianCounter", name = "Hide HUD guardian counter", description = "The guardian count on the HUD", section = gotrSection, position = 15)
+	@ConfigItem(keyName = "gotrHudGuardianCounter", name = "Hide HUD guardian counter", description = "The guardian count on the HUD", section = gotrSection, position = 18)
 	default boolean gotrHudGuardianCounter()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrHudPortalLocation", name = "Hide HUD portal location", description = "The portal location text on the HUD", section = gotrSection, position = 16)
+	@ConfigItem(keyName = "gotrHudPortalLocation", name = "Hide HUD portal location", description = "The portal location text on the HUD", section = gotrSection, position = 19)
 	default boolean gotrHudPortalLocation()
 	{
 		return false;
