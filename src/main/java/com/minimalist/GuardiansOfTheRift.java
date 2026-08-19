@@ -96,11 +96,19 @@ final class GuardiansOfTheRift
 	static final Set<Integer> ESSENCE_PILE_OBJECTS = Set.of(43722, 43723);
 
 	/**
-	 * Weak cells table, the four charged Barriers, and the Elemental/Catalytic guides.
+	 * Weak cells table and the four charged Barriers.
 	 */
 	static final Set<Integer> BARRIER_AND_CELL_OBJECTS = Set.of(
 		43733, // Weak cells
-		43744, 43747, 43748, 43750, 43751, // Barriers
+		43744, 43747, 43748, 43750, 43751 // Barriers
+	);
+
+	/**
+	 * The Elemental/Catalytic guide markers. The game re-spawns these ground objects
+	 * every few seconds and clearing them from the tile does not un-draw them, so they
+	 * are hidden per-frame through the draw listener instead of scene removal.
+	 */
+	static final Set<Integer> GUIDE_OBJECTS = Set.of(
 		43752, // Elemental guide
 		43753  // Catalytic guide
 	);

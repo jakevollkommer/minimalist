@@ -52,6 +52,7 @@ import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.GroundObjectDespawned;
 import net.runelite.api.events.GroundObjectSpawned;
 import net.runelite.api.events.WallObjectSpawned;
 import net.runelite.api.widgets.Widget;
@@ -87,6 +88,9 @@ public class MinimalistPlugin extends Plugin
 	private final Set<GameObject> guardianStatues = new HashSet<>();
 	private final Map<GameObject, Integer> lastActiveTickByStatue = new HashMap<>();
 	private static final int ACTIVE_STATUE_GRACE_TICKS = 8;
+	/** Guide markers, hidden per-frame like statues; see {@link GuardiansOfTheRift#GUIDE_OBJECTS}. */
+	private final Set<GroundObject> guideMarkers = new HashSet<>();
+	private boolean hideGuideMarkers;
 	// TODO temporary diagnostics state; remove before hub submission
 	private int lastDiagnosticHiddenCount = -1;
 
@@ -136,7 +140,10 @@ public class MinimalistPlugin extends Plugin
 			hiddenWidgetComponents = Set.of();
 			hiddenStatueRenderables = Set.of();
 			hideInactiveStatues = false;
+			hideGuideMarkers = false;
 			guardianStatues.clear();
+			guideMarkers.clear();
+			lastActiveTickByStatue.clear();
 
 			widgetsToRestore.forEach(component -> setWidgetHidden(component, false));
 			if (objectsWereHidden && client.getGameState() == GameState.LOGGED_IN)
@@ -192,6 +199,7 @@ public class MinimalistPlugin extends Plugin
 		{
 			guardianStatues.clear();
 			lastActiveTickByStatue.clear();
+			guideMarkers.clear();
 			hiddenStatueRenderables = Set.of();
 			return;
 		}
@@ -241,24 +249,40 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onBeforeRender(BeforeRender event)
 	{
-		// runs every frame: statue renderables get replaced by the client at will, so
-		// the hidden set must be rebuilt from fresh renderable identities each frame
-		// (bounded at 12 statues, so the per-frame cost is negligible)
+		// runs every frame: renderables get replaced by the client at will, so the
+		// hidden set must be rebuilt from fresh renderable identities each frame
+		// (bounded at 12 statues + 16 guide markers, so the per-frame cost is negligible)
+		hiddenStatueRenderables = Stream.concat(inactiveStatueRenderables(), guideMarkerRenderables())
+			.collect(Collectors.toUnmodifiableSet());
+	}
+
+	private Stream<Renderable> inactiveStatueRenderables()
+	{
 		if (!hideInactiveStatues || guardianStatues.isEmpty())
 		{
-			hiddenStatueRenderables = Set.of();
-			return;
+			return Stream.empty();
 		}
 
 		guardianStatues.stream()
 			.filter(MinimalistPlugin::isPlayingActiveAnimation)
 			.forEach(statue -> lastActiveTickByStatue.put(statue, client.getTickCount()));
 
-		hiddenStatueRenderables = guardianStatues.stream()
+		return guardianStatues.stream()
 			.filter(this::isOutsideActiveGraceWindow)
 			.map(GameObject::getRenderable)
-			.filter(Objects::nonNull)
-			.collect(Collectors.toUnmodifiableSet());
+			.filter(Objects::nonNull);
+	}
+
+	private Stream<Renderable> guideMarkerRenderables()
+	{
+		if (!hideGuideMarkers || guideMarkers.isEmpty())
+		{
+			return Stream.empty();
+		}
+
+		return guideMarkers.stream()
+			.map(GroundObject::getRenderable)
+			.filter(Objects::nonNull);
 	}
 
 	private static boolean isPlayingActiveAnimation(GameObject statue)
@@ -304,7 +328,22 @@ public class MinimalistPlugin extends Plugin
 	@Subscribe
 	public void onGroundObjectSpawned(GroundObjectSpawned event)
 	{
+		trackIfGuideMarker(event.getGroundObject());
 		hideIfCurated(event.getGroundObject(), event.getTile());
+	}
+
+	@Subscribe
+	public void onGroundObjectDespawned(GroundObjectDespawned event)
+	{
+		guideMarkers.remove(event.getGroundObject());
+	}
+
+	private void trackIfGuideMarker(GroundObject groundObject)
+	{
+		if (GuardiansOfTheRift.GUIDE_OBJECTS.contains(groundObject.getId()))
+		{
+			guideMarkers.add(groundObject);
+		}
 	}
 
 	@Subscribe
@@ -327,14 +366,6 @@ public class MinimalistPlugin extends Plugin
 
 	private void hideIfCurated(TileObject spawnedObject, Tile tile)
 	{
-		// TODO temporary diagnostics for the guides not hiding; remove before hub submission
-		if (spawnedObject.getId() == 43752 || spawnedObject.getId() == 43753)
-		{
-			log.info("[minimalist-diag] guide id={} type={} at {} - willHide={}",
-				spawnedObject.getId(), spawnedObject.getClass().getSimpleName(),
-				spawnedObject.getWorldLocation(), isCuratedObject(spawnedObject));
-		}
-
 		if (hiddenObjectIds.isEmpty() || !isCuratedObject(spawnedObject))
 		{
 			return;
@@ -410,7 +441,13 @@ public class MinimalistPlugin extends Plugin
 
 	private void scanTile(Tile tile)
 	{
-		Stream.of(tile.getWallObject(), tile.getDecorativeObject(), tile.getGroundObject())
+		GroundObject groundObject = tile.getGroundObject();
+		if (groundObject != null)
+		{
+			trackIfGuideMarker(groundObject);
+		}
+
+		Stream.of(tile.getWallObject(), tile.getDecorativeObject(), groundObject)
 			.filter(Objects::nonNull)
 			.forEach(tileObject -> hideIfCurated(tileObject, tile));
 
@@ -435,6 +472,7 @@ public class MinimalistPlugin extends Plugin
 	private void rebuildHiddenSets()
 	{
 		hideInactiveStatues = config.gotrGuardianStatues();
+		hideGuideMarkers = config.gotrBarriersAndCells();
 		hiddenObjectIds = union(
 			toggled(config.gotrAbyssScenery(), GuardiansOfTheRift.ABYSS_SCENERY_OBJECTS),
 			toggled(config.gotrGuardianRemains(), GuardiansOfTheRift.GUARDIAN_REMAINS_OBJECTS),
