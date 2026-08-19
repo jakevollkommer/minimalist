@@ -199,17 +199,31 @@ final class GuardiansOfTheRift
 		701, // Curved bone
 		731, 732, // unnamed
 		736, // Animal skull
+		724, // Standing torch
 		982, 984, 985, 986, // unnamed
 		1189, // Daisies
 		1246, 1247, // unnamed
+		1276, 1282, 1286, 1289, // Tree, Dead tree (choppable, but only ever inside altars)
+		1417, // unnamed
 		1448, 1449, 1450, 1451, 1502, 1503, // unnamed
 		1688, 1689, 1690, // unnamed wall decor
-		16318, // unnamed
+		10820, // Oak tree (choppable, but only ever inside altars)
+		11174, 11175, // Cave rocks
+		11184, 11185, // Column
+		11192, 11193, // Rockslide
 		11941, 11942, // Column
 		11944, // Stalagmites
+		12575, 12576, // Stalagmite
+		12577, // Stalactite
+		16318, // unnamed
 		34780, 34781, 34782, // Pillar
 		34786, // unnamed
-		34803, 34804, 34805 // Rubble
+		34789, 34790, 34792, // Mysterious glow
+		34803, 34804, 34805, // Rubble
+		37706, 37707, 37773, // unnamed
+		41907, // unnamed
+		43504, // Rain (blood altar)
+		43509, 43510, 43512, 43513, 43516 // Pillars (blood altar)
 	);
 
 	/** Abyssal guardian, Abyssal walker, Abyssal leech — decorative creatures in the arena. */
