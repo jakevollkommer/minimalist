@@ -145,7 +145,7 @@ public interface MinimalistConfig extends Config
 
 	@ConfigSection(
 		name = "Feedback",
-		description = "Suggest more content to declutter",
+		description = "Minimalist covers Guardians of the Rift for now, with more content planned — suggestions welcome",
 		position = 1
 	)
 	String feedbackSection = "feedbackSection";
@@ -153,7 +153,8 @@ public interface MinimalistConfig extends Config
 	@ConfigItem(
 		keyName = "suggestionsLink",
 		name = "Suggest content",
-		description = "Want another minigame or area covered, or found something that should be hidden? Open a GitHub issue at this link",
+		description = "Only Guardians of the Rift is covered so far, but more minigames and areas are planned."
+			+ "<br>Want yours next, or found something that should be hidden? Open a GitHub issue at this link",
 		section = feedbackSection,
 		position = 0
 	)
