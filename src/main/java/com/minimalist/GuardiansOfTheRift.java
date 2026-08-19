@@ -177,21 +177,31 @@ final class GuardiansOfTheRift
 	 */
 	static final Set<Integer> ALTAR_NPCS = Set.of(88, 89, 90, 91); // Ghost
 
-	/** The map regions of the twelve runecrafting altar rooms, plus their scene neighbors. */
-	static final Set<Integer> ALTAR_REGIONS = Set.of(
-		11339, // air
-		11083, // mind
-		10827, // water
-		10571, // earth
-		10315, // fire
-		10059, // body
-		8523, 8522, 8266, 8267, // cosmic + neighbors
-		9035,  // chaos
-		9547,  // nature
-		9803,  // law
-		8779, 8778, // death + neighbor
-		12875  // blood
-	);
+	/**
+	 * The map regions of the twelve runecrafting altar rooms. Each altar's eight
+	 * neighboring regions are included too: altar scenes span several regions and the
+	 * rooms sit in otherwise-empty map space, so the neighbors are always safe.
+	 */
+	static final Set<Integer> ALTAR_REGIONS = java.util.stream.Stream.of(
+			11339, // air
+			11083, // mind
+			10827, // water
+			10571, // earth
+			10315, // fire
+			10059, // body
+			8523,  // cosmic
+			9035,  // chaos
+			9547,  // nature
+			9803,  // law
+			8779,  // death
+			12875  // blood
+		)
+		.flatMap(region -> java.util.stream.Stream.of(
+			region, region + 1, region - 1,
+			region + 256, region - 256,
+			region + 257, region - 257,
+			region + 255, region - 255))
+		.collect(java.util.stream.Collectors.toUnmodifiableSet());
 
 	/**
 	 * Decoration inside the altar rooms: pillars, rubble, columns, stalagmites, corpses,
@@ -210,18 +220,19 @@ final class GuardiansOfTheRift
 		724, // Standing torch
 		662, // Corpse
 		982, 984, 985, 986, // unnamed
-		1166, // Mushrooms
+		1133, // unnamed
+		1164, 1165, 1166, // Mushrooms
 		1176, 1177, // Waterlily
 		1189, // Daisies
 		1190, 1191, // Sunflowers
 		1194, // Tulips
-		1195, 1197, 1198, // Flowers, Flower
+		1195, 1196, 1197, 1198, // Flowers, Flower
 		1246, 1247, // unnamed
-		1276, 1282, 1286, 1289, 1384, // Tree, Dead tree (choppable, but only ever inside altars)
+		1276, 1278, 1282, 1286, 1289, 1384, // Tree, Dead tree (choppable, but only ever inside altars)
 		1385, // unnamed
 		1386, 1388, 1389, // Roots
 		1391, // Plant
-		1417, 1484, // unnamed
+		1417, 1434, 1484, // unnamed
 		1448, 1449, 1450, 1451, 1502, 1503, // unnamed
 		1688, 1689, 1690, // unnamed wall decor
 		10820, // Oak tree (choppable, but only ever inside altars)
@@ -233,8 +244,12 @@ final class GuardiansOfTheRift
 		12575, 12576, // Stalagmite
 		12577, // Stalactite
 		16318, // unnamed
-		20780, // Skeleton
-		39310, // unnamed
+		20665, 20780, // Skeleton
+		27707, // Sink
+		37772, // unnamed
+		39309, 39310, // unnamed
+		43480, // unnamed
+		43508, // Skeleton (blood altar)
 		34780, 34781, 34782, // Pillar
 		34786, // unnamed
 		34789, 34790, 34791, 34792, 34793, 34794, // Mysterious glow
