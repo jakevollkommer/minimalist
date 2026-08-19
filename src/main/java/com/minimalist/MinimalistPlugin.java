@@ -139,7 +139,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	{
 		if (renderable instanceof NPC)
 		{
-			return !hiddenNpcIds.contains(((NPC) renderable).getId());
+			return !isHiddenNpc((NPC) renderable);
 		}
 
 		if (renderable instanceof Projectile)
@@ -179,6 +179,19 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			&& GuardiansOfTheRift.ARENA_GENERIC_SCENERY_OBJECTS.contains(objectId)
 			&& object.getWorldLocation().getRegionID() == GuardiansOfTheRift.ARENA_REGION;
 		return !isArenaGenericScenery;
+	}
+
+	private boolean isHiddenNpc(NPC npc)
+	{
+		if (hiddenNpcIds.contains(npc.getId()))
+		{
+			return true;
+		}
+
+		// generic world NPCs are hidden only inside the altar rooms
+		return hideAltarScenery
+			&& GuardiansOfTheRift.ALTAR_NPCS.contains(npc.getId())
+			&& GuardiansOfTheRift.ALTAR_REGIONS.contains(npc.getWorldLocation().getRegionID());
 	}
 
 	private boolean isHiddenStatue(int statueObjectId)

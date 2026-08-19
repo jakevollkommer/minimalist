@@ -171,6 +171,12 @@ final class GuardiansOfTheRift
 	 */
 	static final Set<Integer> ARENA_GENERIC_SCENERY_OBJECTS = Set.of(85, 738, 2735, 2738, 7389);
 
+	/**
+	 * Decorative NPCs inside the altar rooms (the death altar ghosts). Generic world
+	 * IDs, so only hidden while inside {@link #ALTAR_REGIONS}.
+	 */
+	static final Set<Integer> ALTAR_NPCS = Set.of(91); // Ghost
+
 	/** The map regions of the twelve runecrafting altar rooms, plus their scene neighbors. */
 	static final Set<Integer> ALTAR_REGIONS = Set.of(
 		11339, // air
@@ -199,12 +205,20 @@ final class GuardiansOfTheRift
 		701, // Curved bone
 		731, 732, // unnamed
 		736, // Animal skull
+		119, // Party Balloon
 		724, // Standing torch
 		982, 984, 985, 986, // unnamed
+		1166, // Mushrooms
+		1176, 1177, // Waterlily
 		1189, // Daisies
+		1194, // Tulips
+		1195, 1197, // Flowers, Flower
 		1246, 1247, // unnamed
-		1276, 1282, 1286, 1289, // Tree, Dead tree (choppable, but only ever inside altars)
-		1417, // unnamed
+		1276, 1282, 1286, 1289, 1384, // Tree, Dead tree (choppable, but only ever inside altars)
+		1385, // unnamed
+		1386, 1388, // Roots
+		1391, // Plant
+		1417, 1484, // unnamed
 		1448, 1449, 1450, 1451, 1502, 1503, // unnamed
 		1688, 1689, 1690, // unnamed wall decor
 		10820, // Oak tree (choppable, but only ever inside altars)
@@ -218,7 +232,7 @@ final class GuardiansOfTheRift
 		16318, // unnamed
 		34780, 34781, 34782, // Pillar
 		34786, // unnamed
-		34789, 34790, 34792, // Mysterious glow
+		34789, 34790, 34791, 34792, 34793, // Mysterious glow
 		34803, 34804, 34805, // Rubble
 		37706, 37707, 37773, // unnamed
 		41907, // unnamed
