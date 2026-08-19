@@ -175,7 +175,7 @@ final class GuardiansOfTheRift
 	 * Decorative NPCs inside the altar rooms (the death altar ghosts). Generic world
 	 * IDs, so only hidden while inside {@link #ALTAR_REGIONS}.
 	 */
-	static final Set<Integer> ALTAR_NPCS = Set.of(88, 89, 90, 91); // Ghost
+	static final Set<Integer> ALTAR_NPCS = Set.of(85, 88, 89, 90, 91, 92); // Ghost
 
 	/**
 	 * The map regions of the twelve runecrafting altar rooms. Each altar's eight
