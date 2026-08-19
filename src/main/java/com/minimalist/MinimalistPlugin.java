@@ -366,6 +366,8 @@ public class MinimalistPlugin extends Plugin
 
 	private void hideIfCurated(TileObject spawnedObject, Tile tile)
 	{
+		recordIfUncuratedGotrObject(spawnedObject);
+
 		if (hiddenObjectIds.isEmpty() || !isCuratedObject(spawnedObject))
 		{
 			return;
@@ -432,11 +434,47 @@ public class MinimalistPlugin extends Plugin
 			return;
 		}
 
+		diagSceneIsGotr = Arrays.stream(worldView.getScene().getMapRegions())
+			.anyMatch(regionId -> regionId == 14484);
+
 		Arrays.stream(worldView.getScene().getTiles())
 			.flatMap(Arrays::stream)
 			.flatMap(Arrays::stream)
 			.filter(Objects::nonNull)
 			.forEach(this::scanTile);
+
+		logUncuratedGotrObjects();
+	}
+
+	// TODO temporary diagnostics: inventory of visible uncurated objects while the GOTR
+	// scene is loaded (arena + mines), logged once per rescan; remove before hub submission
+	private final Map<Integer, String> diagUncuratedById = new HashMap<>();
+	private boolean diagSceneIsGotr;
+
+	private void recordIfUncuratedGotrObject(TileObject tileObject)
+	{
+		boolean isCurated = hiddenObjectIds.contains(tileObject.getId())
+			|| GuardiansOfTheRift.GUIDE_OBJECTS.contains(tileObject.getId())
+			|| GuardiansOfTheRift.GUARDIAN_STATUE_OBJECTS.contains(tileObject.getId());
+		if (!diagSceneIsGotr || isCurated)
+		{
+			return;
+		}
+
+		diagUncuratedById.put(tileObject.getId(),
+			client.getObjectDefinition(tileObject.getId()).getName() + "/" + tileObject.getClass().getSimpleName());
+	}
+
+	private void logUncuratedGotrObjects()
+	{
+		if (diagUncuratedById.isEmpty())
+		{
+			return;
+		}
+
+		log.info("[minimalist-diag] uncurated GOTR objects ({}): {}", diagUncuratedById.size(),
+			new java.util.TreeMap<>(diagUncuratedById));
+		diagUncuratedById.clear();
 	}
 
 	private void scanTile(Tile tile)
