@@ -63,6 +63,7 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.util.LinkBrowser;
 
 @PluginDescriptor(
 	name = "Minimalist",
@@ -71,6 +72,9 @@ import net.runelite.client.plugins.PluginDescriptor;
 )
 public class MinimalistPlugin extends Plugin implements RenderCallback
 {
+	private static final String SUGGESTIONS_URL = "https://github.com/jakevollkommer/osrs-minimalist/issues";
+	private static final String SUPPORT_URL = "https://ko-fi.com/jakevollkommer";
+
 	// Draw suppression happens through RenderCallback: static scenery is filtered when
 	// the scene uploads, and animated objects (the guardian statues) are filtered every
 	// frame — so nothing is ever removed from the scene, everything stays hoverable,
@@ -106,6 +110,9 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 	@Inject
 	private MinimalistConfig config;
+
+	@Inject
+	private ConfigManager configManager;
 
 	@Provides
 	MinimalistConfig provideConfig(ConfigManager configManager)
@@ -455,7 +462,31 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 			return;
 		}
 
+		if (isFeedbackButtonPress(event))
+		{
+			openFeedbackLink(event.getKey());
+			return;
+		}
+
 		clientThread.invokeLater(this::applyConfigChange);
+	}
+
+	// The config panel cannot host real buttons, so the feedback "buttons" are checkboxes
+	// that open a link when ticked and immediately untick themselves.
+	private static boolean isFeedbackButtonPress(ConfigChanged event)
+	{
+		boolean isFeedbackButton = MinimalistConfig.SUGGEST_BUTTON_KEY.equals(event.getKey())
+			|| MinimalistConfig.SUPPORT_BUTTON_KEY.equals(event.getKey());
+		return isFeedbackButton && Boolean.parseBoolean(event.getNewValue());
+	}
+
+	private void openFeedbackLink(String buttonKey)
+	{
+		String url = MinimalistConfig.SUGGEST_BUTTON_KEY.equals(buttonKey)
+			? SUGGESTIONS_URL
+			: SUPPORT_URL;
+		LinkBrowser.browse(url);
+		configManager.setConfiguration(MinimalistConfig.GROUP, buttonKey, false);
 	}
 
 	private void applyConfigChange()

@@ -33,6 +33,8 @@ import net.runelite.client.config.ConfigSection;
 public interface MinimalistConfig extends Config
 {
 	String GROUP = "minimalist";
+	String SUGGEST_BUTTON_KEY = "suggestButton";
+	String SUPPORT_BUTTON_KEY = "supportButton";
 
 	@ConfigSection(
 		name = "Guardians of the Rift",
@@ -183,26 +185,26 @@ public interface MinimalistConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "suggestionsLink",
+		keyName = SUGGEST_BUTTON_KEY,
 		name = "Suggest content",
-		description = "Want another minigame or area covered, or found something that should be hidden? Open a GitHub issue at this link",
+		description = "Want another minigame or area covered? Tick to open the GitHub issues page (the box unticks itself)",
 		section = feedbackSection,
 		position = 1
 	)
-	default String suggestionsLink()
+	default boolean suggestButton()
 	{
-		return "github.com/jakevollkommer/osrs-minimalist/issues";
+		return false;
 	}
 
 	@ConfigItem(
-		keyName = "supportLink",
-		name = "Buy me a coffee",
-		description = "Enjoying Minimalist? Support development at this link",
+		keyName = SUPPORT_BUTTON_KEY,
+		name = "Buy me a coffee ❤",
+		description = "Enjoying Minimalist? Tick to open the Ko-fi page (the box unticks itself)",
 		section = feedbackSection,
 		position = 2
 	)
-	default String supportLink()
+	default boolean supportButton()
 	{
-		return "ko-fi.com/jakevollkommer";
+		return false;
 	}
 }
