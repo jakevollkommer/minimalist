@@ -111,31 +111,37 @@ public interface MinimalistConfig extends Config
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrOtherPlayers2d", name = "Hide other players 2D", description = "Hide other players' overhead text, hitsplats, and health bars while at Guardians of the Rift", section = gotrSection, position = 15)
+	@ConfigItem(keyName = "gotrShowFriends", name = "Show friends", description = "Keep friends visible when hiding other players", section = gotrSection, position = 15)
+	default boolean gotrShowFriends()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "gotrOtherPlayers2d", name = "Hide other players 2D", description = "Hide other players' overhead text, hitsplats, and health bars while at Guardians of the Rift", section = gotrSection, position = 16)
 	default boolean gotrOtherPlayers2d()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrOtherPlayersPets", name = "Hide other players' pets", description = "Hide pets that are not yours while at Guardians of the Rift", section = gotrSection, position = 16)
+	@ConfigItem(keyName = "gotrOtherPlayersPets", name = "Hide other players' pets", description = "Hide pets that are not yours while at Guardians of the Rift", section = gotrSection, position = 17)
 	default boolean gotrOtherPlayersPets()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrHudPortalTimer", name = "Hide HUD portal timer", description = "The 'time since last portal' HUD text", section = gotrSection, position = 17)
+	@ConfigItem(keyName = "gotrHudPortalTimer", name = "Hide HUD portal timer", description = "The 'time since last portal' HUD text", section = gotrSection, position = 18)
 	default boolean gotrHudPortalTimer()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "gotrHudGuardianCounter", name = "Hide HUD guardian counter", description = "The guardian count on the HUD", section = gotrSection, position = 18)
+	@ConfigItem(keyName = "gotrHudGuardianCounter", name = "Hide HUD guardian counter", description = "The guardian count on the HUD", section = gotrSection, position = 19)
 	default boolean gotrHudGuardianCounter()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "gotrHudPortalLocation", name = "Hide HUD portal location", description = "The portal location text on the HUD", section = gotrSection, position = 19)
+	@ConfigItem(keyName = "gotrHudPortalLocation", name = "Hide HUD portal location", description = "The portal location text on the HUD", section = gotrSection, position = 20)
 	default boolean gotrHudPortalLocation()
 	{
 		return false;

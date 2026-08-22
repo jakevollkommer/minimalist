@@ -69,6 +69,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	private volatile boolean hideOtherPlayers;
 	private volatile boolean hideOtherPlayers2d;
 	private volatile boolean hideOtherPlayersPets;
+	private volatile boolean showFriends;
 	private volatile boolean hideAltarScenery;
 	private volatile boolean hideArenaGenericScenery;
 	private volatile boolean sceneIsGotr;
@@ -193,6 +194,11 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 	{
 		boolean isOtherPlayerAtGotr = isAtGotrContent() && player != client.getLocalPlayer();
 		if (!isOtherPlayerAtGotr)
+		{
+			return false;
+		}
+
+		if (showFriends && player.isFriend())
 		{
 			return false;
 		}
@@ -506,6 +512,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 		hideOtherPlayers = config.gotrOtherPlayers();
 		hideOtherPlayers2d = config.gotrOtherPlayers2d();
 		hideOtherPlayersPets = config.gotrOtherPlayersPets();
+		showFriends = config.gotrShowFriends();
 		hideAltarScenery = config.gotrAltarScenery();
 		hideArenaGenericScenery = config.gotrAbyssScenery();
 
