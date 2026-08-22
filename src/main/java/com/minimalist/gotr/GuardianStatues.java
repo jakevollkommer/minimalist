@@ -8,7 +8,7 @@ import java.util.Set;
 /**
  * The twelve "Guardian of ..." statues ringing the arena. They stay in the scene for
  * the whole game and animate between active and inactive, so hiding happens per-frame
- * through the render callback — never by scene removal — keeping them clickable and
+ * through the render callback, never by scene removal, keeping them clickable and
  * visible to other plugins.
  */
 public final class GuardianStatues
@@ -26,7 +26,7 @@ public final class GuardianStatues
 		1, 43705, 2, 43709, 3, 43710, 4, 43706, 5, 43711, 6, 43712, 7, 43707, 8, 43708);
 
 	/**
-	 * Each guardian statue's matching portal talisman item — holding it allows entering
+	 * Each guardian statue's matching portal talisman item, holding it allows entering
 	 * that guardian even while inactive, so it stays visible and clickable.
 	 */
 	public static final Map<Integer, Integer> TALISMAN_BY_STATUE = Map.ofEntries(

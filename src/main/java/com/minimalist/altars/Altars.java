@@ -27,7 +27,7 @@ public final class Altars
 	/**
 	 * Neighbor regions an altar's scene may also span. The classic altars form a chain
 	 * of adjacent regions, so one altar's neighbor is often another altar's base region
-	 * — base regions always win, and overlapping neighbor claims keep the first owner.
+	 *, base regions always win, and overlapping neighbor claims keep the first owner.
 	 */
 	private static final Map<Integer, AltarRoom> ALTAR_BY_NEIGHBOR_REGION = ALL.stream()
 		.flatMap(altar -> neighborsOf(altar.baseRegion())
@@ -48,7 +48,7 @@ public final class Altars
 	/**
 	 * Every decorative ID across all altar rooms. Decoration IDs recur between rooms
 	 * (waterlilies at non-water altars, bloodsplatters outside death), so matching uses
-	 * this union whenever ANY altar scene is loaded — per-altar lists exist to document
+	 * this union whenever ANY altar scene is loaded, per-altar lists exist to document
 	 * where each ID was observed, never to scope hiding.
 	 */
 	private static final Set<Integer> ALL_ALTAR_SCENERY = Stream.concat(

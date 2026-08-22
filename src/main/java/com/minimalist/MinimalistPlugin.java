@@ -55,7 +55,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 	// Draw suppression happens through RenderCallback: static scenery is filtered when
 	// the scene uploads, and animated objects (the guardian statues) are filtered every
-	// frame — so nothing is ever removed from the scene, everything stays hoverable,
+	// frame, so nothing is ever removed from the scene, everything stays hoverable,
 	// clickable, and visible to other plugins.
 	//
 	// All fields below are written on the client thread and volatile because drawObject
@@ -210,8 +210,8 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 	/**
 	 * Altar decoration uses generic world IDs, so it is only hidden when the loaded
-	 * scene spans altar regions. The gate reads the Scene parameter — correct even
-	 * during scene upload — never per-object world coordinates.
+	 * scene spans altar regions. The gate reads the Scene parameter, correct even
+	 * during scene upload, never per-object world coordinates.
 	 */
 	private boolean isHiddenAltarScenery(Scene scene, int objectId)
 	{
@@ -326,7 +326,7 @@ public class MinimalistPlugin extends Plugin implements RenderCallback
 
 	/**
 	 * Scenery hiding works through the render callback, which only GPU renderers
-	 * (GPU, GPU with region locker, 117HD) consult — the software renderer never asks.
+	 * (GPU, GPU with region locker, 117HD) consult, the software renderer never asks.
 	 * Warn once per session so players are not left wondering why nothing hides.
 	 */
 	private void warnIfSceneryHidingUnavailable(Scene scene)

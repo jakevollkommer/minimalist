@@ -143,7 +143,7 @@ public interface MinimalistConfig extends Config
 
 	@ConfigSection(
 		name = "Feedback",
-		description = "Minimalist covers Guardians of the Rift for now, with more content planned — suggestions welcome",
+		description = "Minimalist covers Guardians of the Rift for now, with more content planned, suggestions welcome",
 		position = 1
 	)
 	String feedbackSection = "feedbackSection";

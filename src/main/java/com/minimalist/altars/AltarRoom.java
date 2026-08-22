@@ -15,7 +15,7 @@ public interface AltarRoom
 
 	/**
 	 * The room's map region; the scene it loads in may also span neighboring regions.
-	 * Note: the altar-name-to-region assignments are best-effort documentation — hiding
+	 * Note: the altar-name-to-region assignments are best-effort documentation, hiding
 	 * matches the union of all altar decoration whenever any altar scene is loaded, so
 	 * a mislabeled region cannot affect behavior.
 	 */

@@ -9,7 +9,7 @@ import java.util.Set;
  */
 public final class GotrNpcs
 {
-	/** Abyssal guardian, Abyssal walker, Abyssal leech — decorative creatures in the arena. */
+	/** Abyssal guardian, Abyssal walker, Abyssal leech, decorative creatures in the arena. */
 	public static final Set<Integer> ABYSSAL_CREATURES = Set.of(11405, 11406, 11407);
 
 	/** The Weak/Medium/Strong/Overcharged catalytic and elemental guardians players summon. */

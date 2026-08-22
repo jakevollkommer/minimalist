@@ -79,7 +79,7 @@ public final class GotrArena
 	);
 
 	/**
-	 * Lobby and entrance decoration. Deliberately excludes Rubble 43724/43726 — those
+	 * Lobby and entrance decoration. Deliberately excludes Rubble 43724/43726, those
 	 * have a Climb option (agility shortcut).
 	 */
 	public static final Set<Integer> ENTRANCE_SCENERY_OBJECTS = Set.of(
@@ -95,7 +95,7 @@ public final class GotrArena
 
 	/**
 	 * Generic decorative models placed in the arena that also exist elsewhere in the
-	 * game world — only hidden while the GOTR scene is loaded.
+	 * game world, only hidden while the GOTR scene is loaded.
 	 */
 	public static final Set<Integer> ARENA_GENERIC_SCENERY_OBJECTS = Set.of(85, 738, 2735, 2738, 7389);
 
